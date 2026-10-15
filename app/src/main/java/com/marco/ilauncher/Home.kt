@@ -361,6 +361,29 @@ fun PageDots(count: Int, current: Int, pal: Pal) {
     }
 }
 
+/** Cambia pagina durante il trascinamento; oltre l'ultima pagina ne crea una nuova. */
+fun flipPage(st: LauncherState, pager: PagerState, scope: kotlinx.coroutines.CoroutineScope, dir: Int) {
+    val cur = pager.currentPage
+    val count = st.shownPages().size
+    if (dir < 0 && cur > 0) {
+        scope.launch { pager.animateScrollToPage(cur - 1) }
+    } else if (dir > 0 && cur < count - 1) {
+        scope.launch { pager.animateScrollToPage(cur + 1) }
+    } else if (dir > 0 && cur == count - 1) {
+        val d = st.drag
+        val others = st.pages.getOrNull(cur)?.any { it.id != d?.id } ?: false
+        if (others) {
+            st.tgtDock = false
+            st.tgtPage = cur + 1
+            st.tgtIndex = 0
+            scope.launch {
+                delay(150)
+                pager.animateScrollToPage(cur + 1)
+            }
+        }
+    }
+}
+
 @Composable
 fun EditOverlay(st: LauncherState, geo: Geo, pager: PagerState) {
     val scope = rememberCoroutineScope()
@@ -391,6 +414,7 @@ fun EditOverlay(st: LauncherState, geo: Geo, pager: PagerState) {
                         st.beginDrag(item, down.position, down.position - Offset(rect.left, rect.top), Size(rect.width, rect.height))
                         down.consume()
                         var edgeDir = 0
+                        val second = HashMap<Long, Float>()
                         var edgeSince = 0L
                         while (true) {
                             val ev = awaitPointerEvent()
@@ -406,25 +430,23 @@ fun EditOverlay(st: LauncherState, geo: Geo, pager: PagerState) {
                                 edgeSince = c.uptimeMillis
                             } else if (c.uptimeMillis - edgeSince > 650) {
                                 edgeSince = c.uptimeMillis
-                                val cur = pager.currentPage
-                                val count = st.shownPages().size
-                                if (dir < 0 && cur > 0) {
-                                    scope.launch { pager.animateScrollToPage(cur - 1) }
-                                } else if (dir > 0 && cur < count - 1) {
-                                    scope.launch { pager.animateScrollToPage(cur + 1) }
-                                } else if (dir > 0 && cur == count - 1) {
-                                    val d = st.drag
-                                    val others = st.pages.getOrNull(cur)?.any { it.id != d?.id } ?: false
-                                    if (others) {
-                                        st.tgtDock = false
-                                        st.tgtPage = cur + 1
-                                        st.tgtIndex = 0
-                                        scope.launch {
-                                            delay(150)
-                                            pager.animateScrollToPage(cur + 1)
-                                        }
+                                flipPage(st, pager, scope, dir)
+                            }
+                            // secondo dito: cambia pagina (tocco a sinistra/destra o scorrimento)
+                            for (o in ev.changes) {
+                                if (o.id == down.id) continue
+                                if (o.pressed && !o.previousPressed) {
+                                    second[o.id.value] = o.position.x
+                                } else if (!o.pressed && o.previousPressed) {
+                                    val sx = second.remove(o.id.value)
+                                    if (sx != null) {
+                                        val dx = o.position.x - sx
+                                        val dirS = if (dx < -50f * dens) 1 else if (dx > 50f * dens) -1
+                                        else if (o.position.x < g.wPx / 2f) -1 else 1
+                                        flipPage(st, pager, scope, dirS)
                                     }
                                 }
+                                o.consume()
                             }
                         }
                         st.endDrag()
