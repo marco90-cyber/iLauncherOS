@@ -5,6 +5,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -34,3 +37,11 @@ jobs:
         with:
           name: iLauncherOS-debug
           path: app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Publish APK as release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk iLauncherOS.apk
+          gh release delete latest --yes --cleanup-tag || true
+          gh release create latest iLauncherOS.apk --title "iLauncherOS (build ${{ github.run_number }})" --notes "Build #${{ github.run_number }}" --target ${{ github.sha }}
