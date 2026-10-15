@@ -1,0 +1,36 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.9
+
+      - name: Build debug APK
+        run: |
+          set +e
+          gradle assembleDebug --no-daemon --stacktrace 2>&1 | tee build.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            grep -E "^e: |What went wrong|Caused by|Unsupported|Error in|ERROR" -A2 build.log | head -60 | while IFS= read -r l; do echo "::error::${l}"; done
+          fi
+          exit $status
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: iLauncherOS-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
