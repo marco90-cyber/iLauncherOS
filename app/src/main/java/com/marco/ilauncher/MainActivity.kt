@@ -137,8 +137,10 @@ fun LauncherRoot(st: LauncherState) {
         c.isAppearanceLightNavigationBars = !dark && settingsOpen
     }
 
-    BackHandler(enabled = settingsOpen || st.showPicker || st.showSearch || st.editing || st.resizeItem != null) {
+    BackHandler(enabled = settingsOpen || st.showPicker || st.showSearch || st.editing || st.resizeItem != null || st.openFolder != null || st.showCreateFolder) {
         when {
+            st.showCreateFolder -> st.showCreateFolder = false
+            st.openFolder != null -> if (st.folderEditing) st.folderEditing = false else st.openFolder = null
             st.resizeItem != null -> st.resizeItem = null
             settingsOpen -> st.settingsStack = st.settingsStack.dropLast(1)
             st.showPicker -> st.showPicker = false
@@ -154,6 +156,8 @@ fun LauncherRoot(st: LauncherState) {
             if (st.showPicker) WidgetPicker(st, pal)
             if (settingsOpen) SettingsHost(st, pal)
             st.renameKey?.let { RenameDialog(st, it) }
+            st.openFolder?.let { FolderOverlay(st, it) }
+            if (st.showCreateFolder) CreateFolderDialog(st)
             st.resizeItem?.let { ResizeDialog(st, it) }
             st.removeTarget?.let { RemoveDialog(st, it) }
             if (st.wallpaperDialog) WallpaperDialog(st)

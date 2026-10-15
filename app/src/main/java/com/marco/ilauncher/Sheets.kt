@@ -5,6 +5,8 @@ package com.marco.ilauncher
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -130,8 +132,8 @@ fun SearchScreen(st: LauncherState, pal: Pal) {
     val q = query.trim().lowercase()
     val top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val list = if (q.isEmpty()) st.visibleApps.take(8) else st.visibleApps.filter { st.label(it).lowercase().contains(q) }
-    Box(Modifier.fillMaxSize().background(Color(0xDD000000)).clickable { st.showSearch = false }) {
-        Column(Modifier.fillMaxSize().padding(top = top + 16.dp).clickable(enabled = false) {}) {
+    Box(Modifier.fillMaxSize().background(Color(0xDD000000)).pointerInput(Unit) { detectTapGestures { st.showSearch = false } }) {
+        Column(Modifier.fillMaxSize().padding(top = top + 16.dp).pointerInput(Unit) { detectTapGestures { } }) {
             SearchField(
                 query, { query = it }, tr("Search"), Color(0x33FFFFFF), Color.White,
                 Modifier.padding(horizontal = 16.dp).fillMaxWidth(), autoFocus = true

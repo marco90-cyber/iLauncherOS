@@ -436,6 +436,11 @@ fun GridScreen(st: LauncherState, pal: Pal) {
             ) { Text("4×$r", color = if (p.rows == r) pal.text else pal.sub, fontSize = 14.sp, textAlign = TextAlign.Center) }
         }
     }
+    SectionLabel(pal, tr("Last page"))
+    Card(pal) {
+        CheckRow(pal, tr("App Library"), p.lastPage == "library") { p.lastPage = "library"; p.showLibrary = true }
+        CheckRow(pal, tr("Widgets"), p.lastPage == "widgets", true) { p.lastPage = "widgets"; p.showLibrary = true }
+    }
 }
 
 @Composable

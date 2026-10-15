@@ -205,7 +205,27 @@ fun ItemContent(
         val bmp = if (item.kind == Kind.SYS) st.sysIconBitmap()
         else st.appOf(item.key)?.let { st.icon(it) }
         val label = if (item.kind == Kind.SYS) tr("Launcher")
+        else if (item.kind == Kind.FOLDER) item.name
         else st.appOf(item.key)?.let { st.label(it) }.orEmpty()
+        if (item.kind == Kind.FOLDER) {
+            Box(
+                Modifier.offset((pxDp(wPx) - pxDp(iconPx)) / 2, pxDp(top)).size(pxDp(iconPx))
+                    .clip(RoundedCornerShape(pxDp(iconPx * 0.24f))).background(Color(0x66FFFFFF))
+            ) {
+                val pad = iconPx * 0.1f
+                val gap = iconPx * 0.05f
+                val mini = (iconPx - 2 * pad - 2 * gap) / 3f
+                item.apps.take(9).forEachIndexed { i, k ->
+                    val a = st.appOf(k)
+                    if (a != null) {
+                        Image(
+                            st.icon(a), null,
+                            Modifier.offset(pxDp(pad + (i % 3) * (mini + gap)), pxDp(pad + (i / 3) * (mini + gap))).size(pxDp(mini))
+                        )
+                    }
+                }
+            }
+        }
         if (bmp != null) {
             Image(
                 bmp, label, contentScale = ContentScale.Fit,
@@ -287,6 +307,10 @@ fun HomeItem(
             when (item.kind) {
                 Kind.APP -> st.appOf(item.key)?.let { launchApp(ctx, it) }
                 Kind.SYS -> st.settingsStack = listOf("main")
+                Kind.FOLDER -> {
+                    st.folderEditing = false
+                    st.openFolder = item.id
+                }
                 else -> {}
             }
         },
@@ -297,7 +321,12 @@ fun HomeItem(
             .offset { anim }
             .size(pxDp(wPx), pxDp(hPx))
             .alpha(if (hidden) 0f else 1f)
-            .graphicsLayer { rotationZ = rot }
+            .graphicsLayer {
+                rotationZ = rot
+                val sc = if (st.mergeTarget == item.id) 1.18f else 1f
+                scaleX = sc
+                scaleY = sc
+            }
             .then(clickMod)
     ) {
         ItemContent(st, item, wPx, hPx, iconPx, showLabel, editing, dark, geo.density)
@@ -499,7 +528,7 @@ fun EditOverlay(st: LauncherState, geo: Geo, pager: PagerState) {
                         val lh = if (item.isWidget) 0f else labelPx(g, st.prefs, inDock)
                         val bc = badgeCenter(rect, item, iconPxFor(g, st.prefs), lh, dens)
                         if ((down.position - bc).getDistance() < 24f * dens) {
-                            if (item.kind == Kind.APP) uninstallApp(st.ctx, item.key.substringBefore('/')) else st.remove(item)
+                            if (item.kind == Kind.APP) uninstallApp(st.ctx, item.key.substringBefore('/')) else if (item.kind == Kind.FOLDER) st.dissolveFolder(item) else st.remove(item)
                         }
                     }
                 } else {
@@ -638,14 +667,11 @@ fun HomeScreen(st: LauncherState, pal: Pal, dark: Boolean) {
                         st.pickerPage = pager.currentPage
                         st.showPicker = true
                     })
-                    DropdownMenuItem(
-                        text = { Text((if (prefs.lastPage == "library") "✓ " else "") + tr("App Library")) },
-                        onClick = { menu = false; prefs.lastPage = "library"; prefs.showLibrary = true }
-                    )
-                    DropdownMenuItem(
-                        text = { Text((if (prefs.lastPage == "widgets") "✓ " else "") + tr("Widgets")) },
-                        onClick = { menu = false; prefs.lastPage = "widgets"; prefs.showLibrary = true }
-                    )
+                    DropdownMenuItem(text = { Text(tr("Create folder")) }, onClick = {
+                        menu = false
+                        st.pickerPage = pager.currentPage
+                        st.showCreateFolder = true
+                    })
                     DropdownMenuItem(text = { Text(tr("Customize Theme")) }, onClick = {
                         menu = false
                         st.settingsStack = listOf("main", "appearance")

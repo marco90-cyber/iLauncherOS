@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
@@ -58,11 +59,23 @@ fun AppRow(st: LauncherState, app: AppInfo, textColor: Color, onClick: () -> Uni
 fun SearchField(value: String, onChange: (String) -> Unit, hint: String, bg: Color, fg: Color, modifier: Modifier = Modifier, autoFocus: Boolean = false) {
     val focus = remember { androidx.compose.ui.focus.FocusRequester() }
     val kb = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+    val view = androidx.compose.ui.platform.LocalView.current
+    var focused by remember { mutableStateOf(false) }
     if (autoFocus) androidx.compose.runtime.LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(150)
+        var tries = 0
+        while (!focused && tries < 12) {
+            kotlinx.coroutines.delay(120)
+            try {
+                focus.requestFocus()
+            } catch (e: Exception) {
+            }
+            tries++
+        }
+        kotlinx.coroutines.delay(100)
+        kb?.show()
         try {
-            focus.requestFocus()
-            kb?.show()
+            val imm = view.context.getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+            imm.showSoftInput(view, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
         } catch (e: Exception) {
         }
     }
@@ -73,7 +86,9 @@ fun SearchField(value: String, onChange: (String) -> Unit, hint: String, bg: Col
         BasicTextField(
             value = value, onValueChange = onChange, singleLine = true,
             textStyle = TextStyle(color = fg, fontSize = 16.sp), cursorBrush = SolidColor(fg),
-            modifier = Modifier.fillMaxWidth().then(if (autoFocus) Modifier.focusRequester(focus) else Modifier)
+            modifier = Modifier.fillMaxWidth().then(
+                if (autoFocus) Modifier.focusRequester(focus).onFocusChanged { focused = it.isFocused } else Modifier
+            )
         )
     }
 }

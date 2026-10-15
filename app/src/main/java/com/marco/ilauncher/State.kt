@@ -68,6 +68,10 @@ class LauncherState(val ctx: Context, private val sp: SharedPreferences) {
     var renameKey by mutableStateOf<String?>(null)
     var resizeItem by mutableStateOf<Item?>(null)
     var widgetPage by mutableStateOf<List<Item>>(emptyList())
+    var openFolder by mutableStateOf<String?>(null)
+    var folderEditing by mutableStateOf(false)
+    var mergeTarget by mutableStateOf<String?>(null)
+    var showCreateFolder by mutableStateOf(false)
     var removeTarget by mutableStateOf<Item?>(null)
     var wallpaper by mutableStateOf<ImageBitmap?>(null)
     var wallpaperDialog by mutableStateOf(false)
@@ -146,6 +150,67 @@ class LauncherState(val ctx: Context, private val sp: SharedPreferences) {
 
     // ---- caricamento e coerenza ----
 
+    fun folderById(id: String): Item? = pages.flatten().firstOrNull { it.id == id }
+
+    fun renameFolder(id: String, name: String) {
+        pages = pages.map { pg -> pg.map { if (it.id == id) it.copy(name = name) else it } }
+        save()
+    }
+
+    fun removeFromFolder(id: String, key: String) {
+        val f = folderById(id) ?: return
+        val rest = f.apps.filter { it != key }
+        if (rest.isEmpty()) {
+            pages = rp(pages.map { pg -> pg.filter { it.id != id } })
+            openFolder = null
+            folderEditing = false
+        } else {
+            pages = pages.map { pg -> pg.map { if (it.id == id) it.copy(apps = rest) else it } }
+        }
+        addToHome(Item(newId(), Kind.APP, key))
+    }
+
+    fun dissolveFolder(f: Item) {
+        pages = rp(pages.map { pg -> pg.filter { it.id != f.id } })
+        f.apps.forEach { addToHome(Item(newId(), Kind.APP, it)) }
+        openFolder = null
+        folderEditing = false
+        save()
+    }
+
+    fun createFolder(name: String, keys: List<String>, page: Int) {
+        if (keys.isEmpty()) return
+        val sel = keys.toSet()
+        fun strip(l: List<Item>): List<Item> = l.mapNotNull {
+            when {
+                it.kind == Kind.APP && it.key in sel -> null
+                it.kind == Kind.FOLDER -> {
+                    val a = it.apps.filter { x -> x !in sel }
+                    if (a.isEmpty()) null else it.copy(apps = a)
+                }
+                else -> it
+            }
+        }
+        val np = pages.map { strip(it) }.toMutableList()
+        val nd = strip(dock)
+        val folder = Item(newId(), Kind.FOLDER, "", 1, 1, name = name.ifBlank { tr("Folder") }, apps = keys)
+        val p = page.coerceIn(0, np.size - 1)
+        np[p] = np[p] + folder
+        pages = rp(np)
+        dock = bakeDock(nd)
+        save()
+    }
+
+    private fun mergeInto(targetId: String, d: Item) {
+        val t = pages.flatten().firstOrNull { it.id == targetId } ?: return
+        val nf = if (t.kind == Kind.FOLDER) t.copy(apps = t.apps + d.key)
+        else Item(newId(), Kind.FOLDER, "", 1, 1, t.col, t.row, tr("Folder"), listOf(t.key, d.key))
+        pages = rp(pages.map { pg ->
+            pg.mapNotNull { if (it.id == d.id) null else if (it.id == t.id) nf else it }
+        })
+        dock = bakeDock(dock.filter { it.id != d.id })
+    }
+
     fun removeW(item: Item) {
         if (item.kind == Kind.WIDGET_A) item.key.toIntOrNull()?.let { widgets.remove(it) }
         widgetPage = widgetPage.filter { it.id != item.id }
@@ -206,9 +271,16 @@ class LauncherState(val ctx: Context, private val sp: SharedPreferences) {
     private fun reconcile() {
         val valid = apps.map { it.key }.toSet()
         val hidden = prefs.hidden
-        fun keep(i: Item) = if (i.kind == Kind.APP) i.key in valid && i.key !in hidden else true
-        var np = pages.map { pg -> pg.filter { keep(it) } }
-        val nd = dock.filter { keep(it) }
+        fun fix(i: Item): Item? = when (i.kind) {
+            Kind.APP -> if (i.key in valid && i.key !in hidden) i else null
+            Kind.FOLDER -> {
+                val a = i.apps.filter { it in valid && it !in hidden }
+                if (a.isEmpty()) null else i.copy(apps = a)
+            }
+            else -> i
+        }
+        var np = pages.map { pg -> pg.mapNotNull { fix(it) } }
+        val nd = dock.mapNotNull { fix(it) }
         if (prefs.autoArrange) {
             val fresh = apps.filter { it.key !in known && it.key !in hidden }
             if (fresh.isNotEmpty()) {
@@ -324,6 +396,7 @@ class LauncherState(val ctx: Context, private val sp: SharedPreferences) {
         dragGrab = grab
         dragSize = size
         dragInDock = dock.any { it.id == item.id }
+        mergeTarget = null
         tgtDock = dragInDock
         tgtIndex = 0
     }
@@ -331,7 +404,7 @@ class LauncherState(val ctx: Context, private val sp: SharedPreferences) {
     fun shownPages(): List<List<Item>> {
         val d = drag ?: return pages
         val base = pages.map { pg -> pg.filter { it.id != d.id } }.toMutableList()
-        if (tgtDock) return rp(base)
+        if (tgtDock || mergeTarget != null) return rp(base)
         while (base.size <= tgtPage) base.add(emptyList())
         val p = tgtPage.coerceIn(0, base.size - 1)
         if (prefs.freeLayout) {
@@ -403,6 +476,7 @@ class LauncherState(val ctx: Context, private val sp: SharedPreferences) {
         dragFinger = finger
         val inDockZone = geo.showDock && finger.y > geo.dockTop - geo.density * 8f
         if (inDockZone) {
+            mergeTarget = null
             if (d.kind == Kind.APP || d.kind == Kind.SYS) {
                 val others = dock.filter { it.id != d.id }
                 if (others.size < prefs.cols) {
@@ -417,6 +491,23 @@ class LauncherState(val ctx: Context, private val sp: SharedPreferences) {
             tgtDock = false
             tgtPage = currentPage
             val base = pages.getOrElse(currentPage) { emptyList() }.filter { it.id != d.id }
+            if (d.kind == Kind.APP) {
+                val (pl0, _) = layoutPage(base, prefs.cols, prefs.rows, prefs.freeLayout)
+                var found: String? = null
+                for (p in pl0) {
+                    if (p.item.w != 1 || p.item.h != 1) continue
+                    if (p.item.kind != Kind.APP && p.item.kind != Kind.FOLDER) continue
+                    val cx = geo.cellLeft(p.col) + geo.cellW / 2f
+                    val cy = geo.cellTop(p.row) + geo.cellH / 2f
+                    val dist = Math.hypot((finger.x - cx).toDouble(), (finger.y - cy).toDouble()).toFloat()
+                    val limit = if (mergeTarget == p.item.id) 0.5f else 0.28f
+                    if (dist < geo.cellW * limit) found = p.item.id
+                }
+                mergeTarget = found
+                if (found != null) return
+            } else {
+                mergeTarget = null
+            }
             if (prefs.freeLayout) {
                 val w = minOf(d.w, prefs.cols)
                 val h = minOf(d.h, prefs.rows)
@@ -442,7 +533,15 @@ class LauncherState(val ctx: Context, private val sp: SharedPreferences) {
     }
 
     fun endDrag() {
-        if (drag == null) return
+        val dd = drag ?: return
+        val mt = mergeTarget
+        if (mt != null && dd.kind == Kind.APP) {
+            mergeInto(mt, dd)
+            mergeTarget = null
+            drag = null
+            save()
+            return
+        }
         val newPages = shownPages()
         val newDock = shownDock()
         pages = rp(newPages)

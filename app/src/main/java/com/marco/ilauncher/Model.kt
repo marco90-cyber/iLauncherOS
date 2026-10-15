@@ -4,7 +4,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import kotlin.math.min
 
-enum class Kind { APP, SYS, WIDGET_B, WIDGET_A }
+enum class Kind { APP, SYS, WIDGET_B, WIDGET_A, FOLDER }
 
 /**
  * Elemento della home.
@@ -19,7 +19,10 @@ data class Item(
     val h: Int = 1,
     /** Posizione fissa (solo con "spazi vuoti" attivo). Nel dock: col = slot. -1 = automatica. */
     val col: Int = -1,
-    val row: Int = -1
+    val row: Int = -1,
+    /** Cartelle: nome e chiavi delle app contenute. */
+    val name: String = "",
+    val apps: List<String> = emptyList()
 ) {
     val isWidget: Boolean get() = kind == Kind.WIDGET_B || kind == Kind.WIDGET_A
 }
@@ -27,10 +30,12 @@ data class Item(
 fun newId(): String = java.lang.Long.toString(System.nanoTime(), 36) + (0..999).random()
 
 fun Item.toJson(): JSONObject =
-    JSONObject().put("id", id).put("k", kind.name).put("key", key).put("w", w).put("h", h).put("c", col).put("r", row)
+    JSONObject().put("id", id).put("k", kind.name).put("key", key).put("w", w).put("h", h).put("c", col).put("r", row).put("n", name).put("a", JSONArray(apps))
 
 fun itemFromJson(o: JSONObject): Item? = try {
-    Item(o.getString("id"), Kind.valueOf(o.getString("k")), o.getString("key"), o.optInt("w", 1), o.optInt("h", 1), o.optInt("c", -1), o.optInt("r", -1))
+    Item(o.getString("id"), Kind.valueOf(o.getString("k")), o.getString("key"), o.optInt("w", 1), o.optInt("h", 1), o.optInt("c", -1), o.optInt("r", -1),
+        o.optString("n", ""),
+        o.optJSONArray("a")?.let { a -> (0 until a.length()).map { a.getString(it) } } ?: emptyList())
 } catch (e: Exception) {
     null
 }
@@ -222,6 +227,7 @@ private val IT = mapOf(
     "Allow location for the weather" to "Consenti la posizione per il meteo",
     "No results" to "Nessun risultato", "Select Default Launcher " to "Scegli launcher predefinito",
     "Choose photo" to "Scegli una foto", "Use system wallpaper" to "Usa lo sfondo di sistema",
+    "Create folder" to "Crea cartella", "Folder" to "Cartella", "Folder name" to "Nome cartella", "Last page" to "Ultima pagina",
     "Allow empty spaces" to "Consenti spazi vuoti",
     "Icons stay where you drop them, leaving empty spaces on the Home Screen and in the Dock." to "Le icone restano dove le lasci, con spazi vuoti nella Home e nel Dock.",
     "Hide the navigation bar. Swipe from the edge to show it." to "Nasconde la barra di navigazione. Scorri dal bordo per mostrarla.",
