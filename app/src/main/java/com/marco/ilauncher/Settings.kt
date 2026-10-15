@@ -291,8 +291,15 @@ fun SettingsHost(st: LauncherState, pal: Pal) {
                                 }
                             }
                         }
-                        "library" -> Card(pal) {
-                            SwitchRow(pal, tr("Show App Library"), p.showLibrary, true) { p.showLibrary = it }
+                        "library" -> {
+                            Card(pal) {
+                                SwitchRow(pal, tr("Show App Library"), p.showLibrary, true) { p.showLibrary = it }
+                            }
+                            SectionLabel(pal, tr("Last page"))
+                            Card(pal) {
+                                CheckRow(pal, tr("App Library"), p.lastPage == "library") { p.lastPage = "library"; p.showLibrary = true }
+                                CheckRow(pal, tr("Widgets"), p.lastPage == "widgets", true) { p.lastPage = "widgets"; p.showLibrary = true }
+                            }
                         }
                         "names" -> {
                             Footnote(pal, tr("Tap an app to rename it."))
@@ -435,11 +442,6 @@ fun GridScreen(st: LauncherState, pal: Pal) {
                 contentAlignment = Alignment.Center
             ) { Text("4×$r", color = if (p.rows == r) pal.text else pal.sub, fontSize = 14.sp, textAlign = TextAlign.Center) }
         }
-    }
-    SectionLabel(pal, tr("Last page"))
-    Card(pal) {
-        CheckRow(pal, tr("App Library"), p.lastPage == "library") { p.lastPage = "library"; p.showLibrary = true }
-        CheckRow(pal, tr("Widgets"), p.lastPage == "widgets", true) { p.lastPage = "widgets"; p.showLibrary = true }
     }
 }
 

@@ -118,7 +118,7 @@ fun hitItem(st: LauncherState, geo: Geo, page: Int, p: Offset): Pair<Item, Rect>
         return null
     }
     val pg = st.shownPages().getOrNull(page) ?: return null
-    val (placed, _) = layoutPage(pg, geo.cols, geo.rows, st.prefs.freeLayout)
+    val (placed, _) = st.layoutShown(pg)
     for (pl in placed) {
         val r = Rect(
             geo.cellLeft(pl.col), geo.cellTop(pl.row),
@@ -323,7 +323,7 @@ fun HomeItem(
             .alpha(if (hidden) 0f else 1f)
             .graphicsLayer {
                 rotationZ = rot
-                val sc = if (st.mergeTarget == item.id) 1.18f else 1f
+                val sc = if (st.mergeTarget == item.id) 1.18f else if (st.hoverId == item.id) 1.08f else 1f
                 scaleX = sc
                 scaleY = sc
             }
@@ -346,7 +346,7 @@ fun HomeItem(
 
 @Composable
 fun HomePageGrid(st: LauncherState, geo: Geo, items: List<Item>, dark: Boolean) {
-    val (placed, _) = layoutPage(items, geo.cols, geo.rows, st.prefs.freeLayout)
+    val (placed, _) = st.layoutShown(items)
     val iconPx = iconPxFor(geo, st.prefs)
     Box(Modifier.fillMaxSize()) {
         for (pl in placed) {
@@ -423,7 +423,7 @@ fun flipPage(st: LauncherState, pager: PagerState, scope: kotlinx.coroutines.Cor
 
 fun rectOfItem(st: LauncherState, geo: Geo, page: Int, id: String): Rect? {
     val pg = st.shownPages().getOrNull(page) ?: return null
-    val (placed, _) = layoutPage(pg, geo.cols, geo.rows, st.prefs.freeLayout)
+    val (placed, _) = st.layoutShown(pg)
     val pl = placed.firstOrNull { it.item.id == id } ?: return null
     return Rect(
         geo.cellLeft(pl.col), geo.cellTop(pl.row),
@@ -572,6 +572,13 @@ fun HomeScreen(st: LauncherState, pal: Pal, dark: Boolean) {
         val widgetsMode = prefs.lastPage == "widgets"
         LaunchedEffect(st.editing) {
             if (st.editing && !widgetsMode && pager.currentPage >= shown.size) pager.animateScrollToPage(shown.size - 1)
+        }
+        LaunchedEffect(st.hoverId) {
+            val hv = st.hoverId
+            if (hv != null) {
+                delay(1000)
+                if (st.hoverId == hv && st.drag != null) st.mergeTarget = hv
+            }
         }
         LaunchedEffect(st.homeTick) {
             if (st.homeTick > 0) pager.animateScrollToPage(0)

@@ -71,6 +71,7 @@ class LauncherState(val ctx: Context, private val sp: SharedPreferences) {
     var openFolder by mutableStateOf<String?>(null)
     var folderEditing by mutableStateOf(false)
     var mergeTarget by mutableStateOf<String?>(null)
+    var hoverId by mutableStateOf<String?>(null)
     var showCreateFolder by mutableStateOf(false)
     var removeTarget by mutableStateOf<Item?>(null)
     var wallpaper by mutableStateOf<ImageBitmap?>(null)
@@ -149,6 +150,18 @@ class LauncherState(val ctx: Context, private val sp: SharedPreferences) {
     }
 
     // ---- caricamento e coerenza ----
+
+    /** Disposizione mostrata: durante il trascinamento le cartelle restano ferme e le altre icone si adattano. */
+    fun layoutShown(items: List<Item>): Pair<List<Placed>, List<Item>> {
+        if (prefs.freeLayout || drag == null) return layoutPage(items, prefs.cols, prefs.rows, prefs.freeLayout)
+        val pos = HashMap<String, Pair<Int, Int>>()
+        for (pg in pages) for (pl in layoutPage(pg, prefs.cols, prefs.rows, false).first) pos[pl.item.id] = pl.col to pl.row
+        val pinned = items.map {
+            val p = pos[it.id]
+            if (it.kind == Kind.FOLDER && p != null) it.copy(col = p.first, row = p.second) else it.copy(col = -1, row = -1)
+        }
+        return layoutPage(pinned, prefs.cols, prefs.rows, true)
+    }
 
     fun folderById(id: String): Item? = pages.flatten().firstOrNull { it.id == id }
 
@@ -397,6 +410,7 @@ class LauncherState(val ctx: Context, private val sp: SharedPreferences) {
         dragSize = size
         dragInDock = dock.any { it.id == item.id }
         mergeTarget = null
+        hoverId = null
         tgtDock = dragInDock
         tgtIndex = 0
     }
@@ -404,7 +418,7 @@ class LauncherState(val ctx: Context, private val sp: SharedPreferences) {
     fun shownPages(): List<List<Item>> {
         val d = drag ?: return pages
         val base = pages.map { pg -> pg.filter { it.id != d.id } }.toMutableList()
-        if (tgtDock || mergeTarget != null) return rp(base)
+        if (tgtDock || mergeTarget != null || hoverId != null) return rp(base)
         while (base.size <= tgtPage) base.add(emptyList())
         val p = tgtPage.coerceIn(0, base.size - 1)
         if (prefs.freeLayout) {
@@ -492,21 +506,33 @@ class LauncherState(val ctx: Context, private val sp: SharedPreferences) {
             tgtPage = currentPage
             val base = pages.getOrElse(currentPage) { emptyList() }.filter { it.id != d.id }
             if (d.kind == Kind.APP) {
-                val (pl0, _) = layoutPage(base, prefs.cols, prefs.rows, prefs.freeLayout)
-                var found: String? = null
+                val (pl0, _) = layoutShown(base)
+                var cand: Item? = null
                 for (p in pl0) {
                     if (p.item.w != 1 || p.item.h != 1) continue
                     if (p.item.kind != Kind.APP && p.item.kind != Kind.FOLDER) continue
                     val cx = geo.cellLeft(p.col) + geo.cellW / 2f
                     val cy = geo.cellTop(p.row) + geo.cellH / 2f
                     val dist = Math.hypot((finger.x - cx).toDouble(), (finger.y - cy).toDouble()).toFloat()
-                    val limit = if (mergeTarget == p.item.id) 0.5f else 0.28f
-                    if (dist < geo.cellW * limit) found = p.item.id
+                    if (dist < geo.cellW * 0.5f) cand = p.item
                 }
-                mergeTarget = found
-                if (found != null) return
+                if (cand != null) {
+                    if (cand.kind == Kind.FOLDER) {
+                        // le cartelle restano ferme: ci si entra subito
+                        hoverId = null
+                        mergeTarget = cand.id
+                    } else if (mergeTarget != cand.id) {
+                        // sopra un'altra app: aspetta un secondo prima di spostare, per poter fare la cartella
+                        mergeTarget = null
+                        hoverId = cand.id
+                    }
+                    return
+                }
+                hoverId = null
+                mergeTarget = null
             } else {
                 mergeTarget = null
+                hoverId = null
             }
             if (prefs.freeLayout) {
                 val w = minOf(d.w, prefs.cols)
@@ -517,7 +543,7 @@ class LauncherState(val ctx: Context, private val sp: SharedPreferences) {
                 tgtRow = (tly / geo.cellH).toInt().coerceIn(0, prefs.rows - h)
                 return
             }
-            val (placed, _) = layoutPage(base, prefs.cols, prefs.rows)
+            val (placed, _) = layoutShown(base)
             val c = ((finger.x - geo.gridLeft) / geo.cellW).toInt().coerceIn(0, prefs.cols - 1)
             val r = ((finger.y - geo.gridTop) / geo.cellH).toInt().coerceIn(0, prefs.rows - 1)
             val lin = r * prefs.cols + c
@@ -535,6 +561,7 @@ class LauncherState(val ctx: Context, private val sp: SharedPreferences) {
     fun endDrag() {
         val dd = drag ?: return
         val mt = mergeTarget
+        hoverId = null
         if (mt != null && dd.kind == Kind.APP) {
             mergeInto(mt, dd)
             mergeTarget = null
