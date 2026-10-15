@@ -499,7 +499,7 @@ fun EditOverlay(st: LauncherState, geo: Geo, pager: PagerState) {
                         val lh = if (item.isWidget) 0f else labelPx(g, st.prefs, inDock)
                         val bc = badgeCenter(rect, item, iconPxFor(g, st.prefs), lh, dens)
                         if ((down.position - bc).getDistance() < 24f * dens) {
-                            if (item.kind == Kind.APP) st.removeTarget = item else st.remove(item)
+                            if (item.kind == Kind.APP) uninstallApp(st.ctx, item.key.substringBefore('/')) else st.remove(item)
                         }
                     }
                 } else {
@@ -561,7 +561,10 @@ fun HomeScreen(st: LauncherState, pal: Pal, dark: Boolean) {
                     var total = 0f
                     detectVerticalDragGestures(
                         onDragStart = { total = 0f },
-                        onDragEnd = { if (total > 140f * geo.density) st.showSearch = true },
+                        onDragEnd = {
+                            if (total > 120f * geo.density) expandNotifications(st.ctx)
+                            else if (total < -120f * geo.density) st.showSearch = true
+                        },
                         onDragCancel = {},
                         onVerticalDrag = { _, dy -> total += dy }
                     )
@@ -639,7 +642,7 @@ fun HomeScreen(st: LauncherState, pal: Pal, dark: Boolean) {
                     })
                     DropdownMenuItem(text = { Text(tr("Edit Wallpaper")) }, onClick = {
                         menu = false
-                        st.wallpaperDialog = true
+                        st.pickWallpaper()
                     })
                     DropdownMenuItem(text = { Text(tr("Launcher Settings")) }, onClick = {
                         menu = false

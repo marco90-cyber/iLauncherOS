@@ -198,3 +198,12 @@ fun renderSysIcon(shape: String, px: Int = 192): ImageBitmap {
     c.restore()
     return bmp.asImageBitmap()
 }
+
+/** Apre il pannello delle notifiche di sistema (API nascosta: su alcuni telefoni potrebbe non fare nulla). */
+fun expandNotifications(ctx: Context) {
+    try {
+        val sb = ctx.getSystemService("statusbar")
+        Class.forName("android.app.StatusBarManager").getMethod("expandNotificationsPanel").invoke(sb)
+    } catch (e: Exception) {
+    }
+}

@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -368,7 +369,7 @@ fun IconScreen(st: LauncherState, pal: Pal) {
     val p = st.prefs
     SectionLabel(pal, tr("Icon shape"))
     Card(pal) {
-        val shapes = listOf("squircle" to "Squircle", "circle" to "Circle", "rounded" to "Rounded square")
+        val shapes = listOf("squircle" to "Squircle", "circle" to "Circle")
         shapes.forEachIndexed { i, (k, n) ->
             CheckRow(pal, tr(n), p.iconShape == k, i == shapes.size - 1) { st.setIconShape(k) }
         }
@@ -393,6 +394,9 @@ fun StyleScreen(st: LauncherState, pal: Pal) {
         SwitchRow(pal, tr("Widget Captions"), p.widgetCaptions) { p.widgetCaptions = it }
         SwitchRow(pal, tr("Dim wallpaper in dark mode"), p.dimWallpaper, true) { p.dimWallpaper = it }
     }
+    Card(pal) {
+        SetRow(pal, Icons.Filled.Palette, Color(0xFF8E8E93), tr("Use system wallpaper"), true) { st.clearWallpaper() }
+    }
 }
 
 @Composable
@@ -408,7 +412,12 @@ fun GridScreen(st: LauncherState, pal: Pal) {
                 for (r in 0 until p.rows) {
                     Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         for (c in 0 until p.cols) {
-                            Box(Modifier.weight(1f).fillMaxSize().padding(2.dp).clip(RoundedCornerShape(8.dp)).background(Color(0x88FFFFFF)))
+                            Box(Modifier.weight(1f).fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Box(
+                                    Modifier.fillMaxWidth(0.78f).aspectRatio(1f)
+                                        .clip(RoundedCornerShape(10.dp)).background(Color(0x99FFFFFF))
+                                )
+                            }
                         }
                     }
                 }

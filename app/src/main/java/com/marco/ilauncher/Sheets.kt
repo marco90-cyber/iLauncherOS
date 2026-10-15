@@ -134,7 +134,7 @@ fun SearchScreen(st: LauncherState, pal: Pal) {
         Column(Modifier.fillMaxSize().padding(top = top + 16.dp).clickable(enabled = false) {}) {
             SearchField(
                 query, { query = it }, tr("Search"), Color(0x33FFFFFF), Color.White,
-                Modifier.padding(horizontal = 16.dp).fillMaxWidth()
+                Modifier.padding(horizontal = 16.dp).fillMaxWidth(), autoFocus = true
             )
             Spacer(Modifier.height(10.dp))
             LazyColumn(Modifier.fillMaxSize()) {

@@ -33,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
@@ -54,7 +55,17 @@ fun AppRow(st: LauncherState, app: AppInfo, textColor: Color, onClick: () -> Uni
 }
 
 @Composable
-fun SearchField(value: String, onChange: (String) -> Unit, hint: String, bg: Color, fg: Color, modifier: Modifier = Modifier) {
+fun SearchField(value: String, onChange: (String) -> Unit, hint: String, bg: Color, fg: Color, modifier: Modifier = Modifier, autoFocus: Boolean = false) {
+    val focus = remember { androidx.compose.ui.focus.FocusRequester() }
+    val kb = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+    if (autoFocus) androidx.compose.runtime.LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(150)
+        try {
+            focus.requestFocus()
+            kb?.show()
+        } catch (e: Exception) {
+        }
+    }
     Box(
         modifier.clip(RoundedCornerShape(14.dp)).background(bg).padding(horizontal = 14.dp, vertical = 10.dp)
     ) {
@@ -62,7 +73,7 @@ fun SearchField(value: String, onChange: (String) -> Unit, hint: String, bg: Col
         BasicTextField(
             value = value, onValueChange = onChange, singleLine = true,
             textStyle = TextStyle(color = fg, fontSize = 16.sp), cursorBrush = SolidColor(fg),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().then(if (autoFocus) Modifier.focusRequester(focus) else Modifier)
         )
     }
 }
