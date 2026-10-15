@@ -147,7 +147,7 @@ class LauncherState(val ctx: Context, private val sp: SharedPreferences) {
         list.add(Item(newId(), Kind.WIDGET_B, "calendar", 2, 2))
         list.add(Item(newId(), Kind.SYS, "settings"))
         apps.filter { it.key !in dockSet && it.key !in hidden }.forEach { list.add(Item(newId(), Kind.APP, it.key)) }
-        pages = repack(listOf(list), prefs.cols, prefs.rows)
+        pages = rp(listOf(list))
     }
 
     private fun reconcile() {
@@ -165,12 +165,46 @@ class LauncherState(val ctx: Context, private val sp: SharedPreferences) {
                 np = m
             }
         }
-        pages = repack(np, prefs.cols, prefs.rows)
+        pages = rp(np)
         dock = nd
     }
 
+    private fun rp(l: List<List<Item>>): List<List<Item>> {
+        val free = prefs.freeLayout
+        val r = repack(l, prefs.cols, prefs.rows, free)
+        return if (free) r.map { pg -> bakePage(pg) } else r
+    }
+
+    private fun bakePage(pg: List<Item>): List<Item> =
+        layoutPage(pg, prefs.cols, prefs.rows, true).first.map { it.item.copy(col = it.col, row = it.row) }
+
+    /** Nel dock con spazi vuoti ogni elemento ha uno slot fisso (col). */
+    private fun bakeDock(l: List<Item>): List<Item> {
+        if (!prefs.freeLayout) return l.map { it.copy(col = -1, row = -1) }
+        val used = HashSet<Int>()
+        val out = ArrayList<Item>()
+        for (it in l) if (it.col in 0 until prefs.cols && used.add(it.col)) out.add(it)
+        for (it in l) {
+            if (out.any { o -> o.id == it.id }) continue
+            val slot = (0 until prefs.cols).firstOrNull { s -> s !in used } ?: continue
+            used.add(slot)
+            out.add(it.copy(col = slot))
+        }
+        return out.sortedBy { it.col }
+    }
+
+    fun setFree(v: Boolean) {
+        prefs.freeLayout = v
+        pages = rp(pages.map { pg -> pg.map { it.copy(col = -1, row = -1) } })
+        dock = bakeDock(dock.map { it.copy(col = -1, row = -1) })
+        save()
+    }
+
+    private var tgtCol = 0
+    private var tgtRow = 0
+
     fun relayout() {
-        pages = repack(pages, prefs.cols, prefs.rows)
+        pages = rp(pages)
         save()
     }
 
@@ -182,15 +216,15 @@ class LauncherState(val ctx: Context, private val sp: SharedPreferences) {
 
     fun remove(item: Item) {
         if (item.kind == Kind.WIDGET_A) item.key.toIntOrNull()?.let { widgets.remove(it) }
-        pages = repack(pages.map { pg -> pg.filter { it.id != item.id } }, prefs.cols, prefs.rows)
-        dock = dock.filter { it.id != item.id }
+        pages = rp(pages.map { pg -> pg.filter { it.id != item.id } })
+        dock = bakeDock(dock.filter { it.id != item.id })
         save()
     }
 
     fun addToHome(item: Item) {
         val m = pages.toMutableList()
         m[m.size - 1] = m.last() + item
-        pages = repack(m, prefs.cols, prefs.rows)
+        pages = rp(m)
         save()
     }
 
@@ -198,19 +232,19 @@ class LauncherState(val ctx: Context, private val sp: SharedPreferences) {
         val m = pages.toMutableList()
         val p = page.coerceIn(0, m.size - 1)
         m[p] = listOf(Item(newId(), kind, key, w, h)) + m[p]
-        pages = repack(m, prefs.cols, prefs.rows)
+        pages = rp(m)
         save()
     }
 
     fun resize(item: Item, w: Int, h: Int) {
-        pages = repack(pages.map { pg -> pg.map { if (it.id == item.id) it.copy(w = w, h = h) else it } }, prefs.cols, prefs.rows)
+        pages = rp(pages.map { pg -> pg.map { if (it.id == item.id) it.copy(w = w, h = h) else it } })
         save()
     }
 
     fun hideApp(key: String, hide: Boolean) {
         prefs.hidden = if (hide) prefs.hidden + key else prefs.hidden - key
         if (hide) {
-            pages = repack(pages.map { pg -> pg.filter { !(it.kind == Kind.APP && it.key == key) } }, prefs.cols, prefs.rows)
+            pages = rp(pages.map { pg -> pg.filter { !(it.kind == Kind.APP && it.key == key) } })
             dock = dock.filter { !(it.kind == Kind.APP && it.key == key) }
         } else if (prefs.autoArrange) {
             val onHome = (pages.flatten() + dock).any { it.kind == Kind.APP && it.key == key }
@@ -238,13 +272,43 @@ class LauncherState(val ctx: Context, private val sp: SharedPreferences) {
     fun shownPages(): List<List<Item>> {
         val d = drag ?: return pages
         val base = pages.map { pg -> pg.filter { it.id != d.id } }.toMutableList()
-        if (tgtDock) return repack(base, prefs.cols, prefs.rows)
+        if (tgtDock) return rp(base)
         while (base.size <= tgtPage) base.add(emptyList())
         val p = tgtPage.coerceIn(0, base.size - 1)
+        if (prefs.freeLayout) {
+            val (c, r) = nearestFree(base[p], d, tgtCol, tgtRow)
+            val l2 = base[p].toMutableList()
+            l2.add(d.copy(col = c, row = r))
+            base[p] = l2
+            return repackKeepEmpty(base)
+        }
         val l = base[p].toMutableList()
         l.add(tgtIndex.coerceIn(0, l.size), d)
         base[p] = l
         return repackKeepEmpty(base)
+    }
+
+    private fun nearestFree(page: List<Item>, d: Item, tc: Int, tr: Int): Pair<Int, Int> {
+        val cols = prefs.cols
+        val rows = prefs.rows
+        val w = minOf(d.w, cols)
+        val h = minOf(d.h, rows)
+        val (placed, _) = layoutPage(page, cols, rows, true)
+        var best: Pair<Int, Int>? = null
+        var bestD = Int.MAX_VALUE
+        for (r in 0..rows - h) for (c in 0..cols - w) {
+            val ok = placed.none { p ->
+                p.col < c + w && c < p.col + minOf(p.item.w, cols) && p.row < r + h && r < p.row + minOf(p.item.h, rows)
+            }
+            if (ok) {
+                val dist = (c - tc) * (c - tc) + (r - tr) * (r - tr)
+                if (dist < bestD) {
+                    bestD = dist
+                    best = c to r
+                }
+            }
+        }
+        return best ?: (-1 to -1)
     }
 
     private fun repackKeepEmpty(l: List<List<Item>>): List<List<Item>> {
@@ -253,9 +317,9 @@ class LauncherState(val ctx: Context, private val sp: SharedPreferences) {
         var i = 0
         while (i < l.size || carry.isNotEmpty()) {
             val items = carry + (if (i < l.size) l[i] else emptyList())
-            val (placed, over) = layoutPage(items, prefs.cols, prefs.rows)
+            val (placed, over) = layoutPage(items, prefs.cols, prefs.rows, prefs.freeLayout)
             out.add(placed.map { it.item })
-            carry = over
+            carry = over.map { it.copy(col = -1, row = -1) }
             i++
         }
         return if (out.isEmpty()) listOf(emptyList()) else out
@@ -265,6 +329,11 @@ class LauncherState(val ctx: Context, private val sp: SharedPreferences) {
         val d = drag ?: return dock
         val base = dock.filter { it.id != d.id }
         if (!tgtDock) return base
+        if (prefs.freeLayout) {
+            val used = base.map { it.col }.toSet()
+            val slot = (0 until prefs.cols).filter { it !in used }.minByOrNull { Math.abs(it - tgtIndex) } ?: return base
+            return (base + d.copy(col = slot)).sortedBy { it.col }
+        }
         val l = base.toMutableList()
         l.add(tgtIndex.coerceIn(0, l.size), d)
         return l
@@ -279,13 +348,25 @@ class LauncherState(val ctx: Context, private val sp: SharedPreferences) {
                 val others = dock.filter { it.id != d.id }
                 if (others.size < prefs.cols) {
                     tgtDock = true
-                    tgtIndex = ((finger.x - geo.dockLeft - geo.dockPad) / geo.dockCellW).toInt().coerceIn(0, others.size)
+                    tgtIndex = if (prefs.freeLayout)
+                        ((finger.x - geo.dockLeft - geo.dockPad) / geo.dockCellW).toInt().coerceIn(0, prefs.cols - 1)
+                    else
+                        ((finger.x - geo.dockLeft - geo.dockPad) / geo.dockCellW).toInt().coerceIn(0, others.size)
                 }
             }
         } else if (finger.y >= geo.gridTop - geo.density * 20f && finger.y <= geo.gridBottom + geo.density * 20f) {
             tgtDock = false
             tgtPage = currentPage
             val base = pages.getOrElse(currentPage) { emptyList() }.filter { it.id != d.id }
+            if (prefs.freeLayout) {
+                val w = minOf(d.w, prefs.cols)
+                val h = minOf(d.h, prefs.rows)
+                val tlx = finger.x - dragGrab.x + geo.cellW / 2f - geo.gridLeft
+                val tly = finger.y - dragGrab.y + geo.cellH / 2f - geo.gridTop
+                tgtCol = (tlx / geo.cellW).toInt().coerceIn(0, prefs.cols - w)
+                tgtRow = (tly / geo.cellH).toInt().coerceIn(0, prefs.rows - h)
+                return
+            }
             val (placed, _) = layoutPage(base, prefs.cols, prefs.rows)
             val c = ((finger.x - geo.gridLeft) / geo.cellW).toInt().coerceIn(0, prefs.cols - 1)
             val r = ((finger.y - geo.gridTop) / geo.cellH).toInt().coerceIn(0, prefs.rows - 1)
@@ -305,8 +386,8 @@ class LauncherState(val ctx: Context, private val sp: SharedPreferences) {
         if (drag == null) return
         val newPages = shownPages()
         val newDock = shownDock()
-        pages = repack(newPages, prefs.cols, prefs.rows)
-        dock = newDock
+        pages = rp(newPages)
+        dock = bakeDock(newDock)
         drag = null
         save()
     }

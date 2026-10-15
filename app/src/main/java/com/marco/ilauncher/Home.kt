@@ -19,6 +19,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -110,13 +111,14 @@ fun hitItem(st: LauncherState, geo: Geo, page: Int, p: Offset): Pair<Item, Rect>
     if (geo.showDock && p.y >= geo.dockTop) {
         val d = st.shownDock()
         for ((i, it) in d.withIndex()) {
-            val r = Rect(geo.dockCellLeft(i), geo.dockTop, geo.dockCellLeft(i) + geo.dockCellW, geo.dockTop + geo.dockH)
+            val slot = if (st.prefs.freeLayout && it.col >= 0) it.col else i
+            val r = Rect(geo.dockCellLeft(slot), geo.dockTop, geo.dockCellLeft(slot) + geo.dockCellW, geo.dockTop + geo.dockH)
             if (r.contains(p)) return it to r
         }
         return null
     }
     val pg = st.shownPages().getOrNull(page) ?: return null
-    val (placed, _) = layoutPage(pg, geo.cols, geo.rows)
+    val (placed, _) = layoutPage(pg, geo.cols, geo.rows, st.prefs.freeLayout)
     for (pl in placed) {
         val r = Rect(
             geo.cellLeft(pl.col), geo.cellTop(pl.row),
@@ -280,7 +282,7 @@ fun HomeItem(
                 else -> {}
             }
         },
-        onLongClick = { if (item.kind == Kind.WIDGET_B || item.kind == Kind.WIDGET_A) st.editing = true else menu = true }
+        onLongClick = { st.editing = true }
     )
     Box(
         Modifier
@@ -307,7 +309,7 @@ fun HomeItem(
 
 @Composable
 fun HomePageGrid(st: LauncherState, geo: Geo, items: List<Item>, dark: Boolean) {
-    val (placed, _) = layoutPage(items, geo.cols, geo.rows)
+    val (placed, _) = layoutPage(items, geo.cols, geo.rows, st.prefs.freeLayout)
     val iconPx = iconPxFor(geo, st.prefs)
     Box(Modifier.fillMaxSize()) {
         for (pl in placed) {
@@ -338,7 +340,7 @@ fun DockBar(st: LauncherState, geo: Geo, pal: Pal, dark: Boolean) {
     for ((i, it) in shown.withIndex()) {
         key(it.id) {
             HomeItem(
-                st, it, IntOffset(geo.dockCellLeft(i).roundToInt(), geo.dockTop.roundToInt()),
+                st, it, IntOffset(geo.dockCellLeft(if (st.prefs.freeLayout && it.col >= 0) it.col else i).roundToInt(), geo.dockTop.roundToInt()),
                 geo.dockCellW, geo.dockH, geo, iconPx, false, true, dark
             )
         }
@@ -492,7 +494,9 @@ fun HomeScreen(st: LauncherState, pal: Pal, dark: Boolean) {
         if (prefs.dimWallpaper && dark) Box(Modifier.fillMaxSize().background(Color(0x55000000)))
 
         Box(
-            Modifier.fillMaxSize().pointerInput(st.editing, pager.currentPage >= shown.size) {
+            Modifier.fillMaxSize().pointerInput(st.editing) {
+                if (!st.editing) detectTapGestures(onLongPress = { st.editing = true })
+            }.pointerInput(st.editing, pager.currentPage >= shown.size) {
                 if (!st.editing && pager.currentPage < shown.size) {
                     var total = 0f
                     detectVerticalDragGestures(

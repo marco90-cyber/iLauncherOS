@@ -101,6 +101,7 @@ class LauncherPrefs(sp: SharedPreferences) {
 
     // General
     var hideNav by BoolPref(sp, "hideNav", false)
+    var freeLayout by BoolPref(sp, "freeLayout", false)
     var autoArrange by BoolPref(sp, "autoArrange", true)
     var blur by BoolPref(sp, "blur", true)
     var hideNames by BoolPref(sp, "hideNames", false)

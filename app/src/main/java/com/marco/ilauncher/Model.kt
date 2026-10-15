@@ -16,7 +16,10 @@ data class Item(
     val kind: Kind,
     val key: String,
     val w: Int = 1,
-    val h: Int = 1
+    val h: Int = 1,
+    /** Posizione fissa (solo con "spazi vuoti" attivo). Nel dock: col = slot. -1 = automatica. */
+    val col: Int = -1,
+    val row: Int = -1
 ) {
     val isWidget: Boolean get() = kind == Kind.WIDGET_B || kind == Kind.WIDGET_A
 }
@@ -24,10 +27,10 @@ data class Item(
 fun newId(): String = java.lang.Long.toString(System.nanoTime(), 36) + (0..999).random()
 
 fun Item.toJson(): JSONObject =
-    JSONObject().put("id", id).put("k", kind.name).put("key", key).put("w", w).put("h", h)
+    JSONObject().put("id", id).put("k", kind.name).put("key", key).put("w", w).put("h", h).put("c", col).put("r", row)
 
 fun itemFromJson(o: JSONObject): Item? = try {
-    Item(o.getString("id"), Kind.valueOf(o.getString("k")), o.getString("key"), o.optInt("w", 1), o.optInt("h", 1))
+    Item(o.getString("id"), Kind.valueOf(o.getString("k")), o.getString("key"), o.optInt("w", 1), o.optInt("h", 1), o.optInt("c", -1), o.optInt("r", -1))
 } catch (e: Exception) {
     null
 }
@@ -61,7 +64,53 @@ fun pagesFromJson(s: String): Pair<List<List<Item>>, List<Item>>? = try {
 data class Placed(val item: Item, val col: Int, val row: Int)
 
 /** Dispone gli elementi nell'ordine, ognuno nel primo spazio libero. Ciò che non entra va in overflow. */
-fun layoutPage(items: List<Item>, cols: Int, rows: Int): Pair<List<Placed>, List<Item>> {
+fun layoutPage(items: List<Item>, cols: Int, rows: Int, free: Boolean = false): Pair<List<Placed>, List<Item>> {
+    if (!free) return layoutSeq(items, cols, rows)
+    val occ = Array(rows) { BooleanArray(cols) }
+    val pos = HashMap<String, Placed>()
+    val over = ArrayList<Item>()
+    fun fits(c: Int, r: Int, w: Int, h: Int): Boolean {
+        if (c < 0 || r < 0 || c + w > cols || r + h > rows) return false
+        for (yy in r until r + h) for (xx in c until c + w) if (occ[yy][xx]) return false
+        return true
+    }
+    fun mark(c: Int, r: Int, w: Int, h: Int) {
+        for (yy in r until r + h) for (xx in c until c + w) occ[yy][xx] = true
+    }
+    for (it in items) {
+        if (it.col >= 0 && it.row >= 0) {
+            val w = min(it.w, cols)
+            val h = min(it.h, rows)
+            if (fits(it.col, it.row, w, h)) {
+                mark(it.col, it.row, w, h)
+                pos[it.id] = Placed(it, it.col, it.row)
+            }
+        }
+    }
+    for (it in items) {
+        if (pos.containsKey(it.id)) continue
+        val w = min(it.w, cols)
+        val h = min(it.h, rows)
+        var done = false
+        var r = 0
+        while (r + h <= rows && !done) {
+            var c = 0
+            while (c + w <= cols && !done) {
+                if (fits(c, r, w, h)) {
+                    mark(c, r, w, h)
+                    pos[it.id] = Placed(it, c, r)
+                    done = true
+                }
+                c++
+            }
+            r++
+        }
+        if (!done) over.add(it)
+    }
+    return items.mapNotNull { pos[it.id] } to over
+}
+
+private fun layoutSeq(items: List<Item>, cols: Int, rows: Int): Pair<List<Placed>, List<Item>> {
     val occ = Array(rows) { BooleanArray(cols) }
     val out = ArrayList<Placed>()
     val over = ArrayList<Item>()
@@ -98,15 +147,15 @@ fun layoutPage(items: List<Item>, cols: Int, rows: Int): Pair<List<Placed>, List
 }
 
 /** Ridistribuisce gli elementi sulle pagine: ciò che non entra scivola nella pagina successiva. */
-fun repack(pages: List<List<Item>>, cols: Int, rows: Int): List<List<Item>> {
+fun repack(pages: List<List<Item>>, cols: Int, rows: Int, free: Boolean = false): List<List<Item>> {
     val out = ArrayList<List<Item>>()
     var carry: List<Item> = emptyList()
     var i = 0
     while (i < pages.size || carry.isNotEmpty()) {
         val items = carry + (if (i < pages.size) pages[i] else emptyList())
-        val (placed, over) = layoutPage(items, cols, rows)
+        val (placed, over) = layoutPage(items, cols, rows, free)
         out.add(placed.map { it.item })
-        carry = over
+        carry = over.map { it.copy(col = -1, row = -1) }
         i++
     }
     val nonEmpty = out.filter { it.isNotEmpty() }
@@ -172,6 +221,8 @@ private val IT = mapOf(
     "Built-in widgets" to "Widget integrati", "Widgets from apps" to "Widget delle app",
     "Allow location for the weather" to "Consenti la posizione per il meteo",
     "No results" to "Nessun risultato", "Select Default Launcher " to "Scegli launcher predefinito",
+    "Allow empty spaces" to "Consenti spazi vuoti",
+    "Icons stay where you drop them, leaving empty spaces on the Home Screen and in the Dock." to "Le icone restano dove le lasci, con spazi vuoti nella Home e nel Dock.",
     "Hide the navigation bar. Swipe from the edge to show it." to "Nasconde la barra di navigazione. Scorri dal bordo per mostrarla.",
     "Add new apps to the Home Screen as they are installed." to "Aggiunge le nuove app alla Home appena installate."
 )

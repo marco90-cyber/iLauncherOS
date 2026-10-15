@@ -340,7 +340,9 @@ fun SettingsHost(st: LauncherState, pal: Pal) {
 fun GeneralScreen(st: LauncherState, pal: Pal) {
     val p = st.prefs
     SectionLabel(pal, tr("Options"))
+    Footnote(pal, tr("Icons stay where you drop them, leaving empty spaces on the Home Screen and in the Dock."))
     Card(pal) {
+        SwitchRow(pal, tr("Allow empty spaces"), p.freeLayout) { st.setFree(it) }
         SwitchRow(pal, tr("Hide Navigation"), p.hideNav) { p.hideNav = it }
         SwitchRow(pal, tr("Auto arrange home screen"), p.autoArrange) { p.autoArrange = it }
         SwitchRow(pal, tr("Blur effect"), p.blur, true) { p.blur = it }
