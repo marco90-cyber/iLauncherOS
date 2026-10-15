@@ -407,7 +407,7 @@ fun BatteryWidget() {
         Modifier.fillMaxSize().clip(RoundedCornerShape(22.dp)).background(CARD_DARK),
         contentAlignment = Alignment.Center
     ) {
-        val fs = with(LocalDensity.current) { (min(maxWidth, maxHeight) / 3.4f).toSp() }
+        val fs = with(LocalDensity.current) { (minOf(maxWidth, maxHeight) / 3.4f).toSp() }
         Canvas(Modifier.fillMaxSize().padding(10.dp)) {
             val stroke = min(size.width, size.height) * 0.07f
             val d = min(size.width, size.height) - stroke
@@ -452,7 +452,7 @@ fun WeatherWidget(st: LauncherState) {
             .background(Brush.verticalGradient(listOf(Color(0xFF3F8CF0), Color(0xFF1F5FBF))))
             .clickable { if (!hasLoc) st.requestLocation() }
     ) {
-        val fs = with(LocalDensity.current) { (min(maxWidth, maxHeight) / 7f).toSp() }
+        val fs = with(LocalDensity.current) { (minOf(maxWidth, maxHeight) / 7f).toSp() }
         val cur = w
         Column(Modifier.fillMaxSize().padding(12.dp), verticalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween) {
             if (cur == null) {
