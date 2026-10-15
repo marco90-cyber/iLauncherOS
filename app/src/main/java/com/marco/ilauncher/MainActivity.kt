@@ -29,12 +29,7 @@ class MainActivity : ComponentActivity() {
 
     private val pkgReceiver = object : BroadcastReceiver() {
         override fun onReceive(c: Context?, i: Intent?) {
-            st.pickWallpaper = {
-            startActivityForResult(
-                Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("image/*"), 5150
-            )
-        }
-        st.reload()
+            st.reload()
         }
     }
 
@@ -43,6 +38,20 @@ class MainActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         st = LauncherState(applicationContext, getSharedPreferences("launcher", Context.MODE_PRIVATE))
         st.widgets = WidgetController(this)
+        st.pickWallpaper = {
+            try {
+                startActivityForResult(
+                    Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("image/*"), 5150
+                )
+            } catch (e: Exception) {
+                try {
+                    startActivityForResult(
+                        Intent.createChooser(Intent(Intent.ACTION_GET_CONTENT).setType("image/*"), null), 5150
+                    )
+                } catch (e2: Exception) {
+                }
+            }
+        }
         st.requestLocation = {
             requestPermissions(arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION), 77)
         }

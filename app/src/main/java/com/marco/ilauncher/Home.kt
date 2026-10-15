@@ -540,8 +540,9 @@ fun HomeScreen(st: LauncherState, pal: Pal, dark: Boolean) {
         val scope = rememberCoroutineScope()
 
         // usciti dalla modalità modifica dalla libreria: resta sulle pagine home
+        val widgetsMode = prefs.lastPage == "widgets"
         LaunchedEffect(st.editing) {
-            if (st.editing && pager.currentPage >= shown.size) pager.animateScrollToPage(shown.size - 1)
+            if (st.editing && !widgetsMode && pager.currentPage >= shown.size) pager.animateScrollToPage(shown.size - 1)
         }
         LaunchedEffect(st.homeTick) {
             if (st.homeTick > 0) pager.animateScrollToPage(0)
@@ -573,10 +574,11 @@ fun HomeScreen(st: LauncherState, pal: Pal, dark: Boolean) {
         ) {
             HorizontalPager(
                 state = pager, modifier = Modifier.fillMaxSize(),
-                userScrollEnabled = !st.editing && st.drag == null
+                userScrollEnabled = (!st.editing || pager.currentPage >= shown.size) && st.drag == null
             ) { page ->
                 Box(Modifier.fillMaxSize().pageFx(pager, page, prefs.transition)) {
                     if (page < shown.size) HomePageGrid(st, geo, shown[page], dark)
+                    else if (widgetsMode) WidgetsPage(st, geo, dark)
                     else LibraryPage(st, pal, dark)
                 }
             }
@@ -605,7 +607,7 @@ fun HomeScreen(st: LauncherState, pal: Pal, dark: Boolean) {
 
         if (prefs.showDock && pager.currentPage < shown.size) DockBar(st, geo, pal, dark)
 
-        if (st.editing) EditOverlay(st, geo, pager)
+        if (st.editing && !(widgetsMode && pager.currentPage >= shown.size)) EditOverlay(st, geo, pager)
 
         // elemento trascinato
         val d = st.drag
@@ -636,6 +638,14 @@ fun HomeScreen(st: LauncherState, pal: Pal, dark: Boolean) {
                         st.pickerPage = pager.currentPage
                         st.showPicker = true
                     })
+                    DropdownMenuItem(
+                        text = { Text((if (prefs.lastPage == "library") "✓ " else "") + tr("App Library")) },
+                        onClick = { menu = false; prefs.lastPage = "library"; prefs.showLibrary = true }
+                    )
+                    DropdownMenuItem(
+                        text = { Text((if (prefs.lastPage == "widgets") "✓ " else "") + tr("Widgets")) },
+                        onClick = { menu = false; prefs.lastPage = "widgets"; prefs.showLibrary = true }
+                    )
                     DropdownMenuItem(text = { Text(tr("Customize Theme")) }, onClick = {
                         menu = false
                         st.settingsStack = listOf("main", "appearance")

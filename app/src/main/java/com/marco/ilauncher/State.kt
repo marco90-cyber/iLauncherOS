@@ -67,6 +67,7 @@ class LauncherState(val ctx: Context, private val sp: SharedPreferences) {
     var settingsStack by mutableStateOf<List<String>>(emptyList())
     var renameKey by mutableStateOf<String?>(null)
     var resizeItem by mutableStateOf<Item?>(null)
+    var widgetPage by mutableStateOf<List<Item>>(emptyList())
     var removeTarget by mutableStateOf<Item?>(null)
     var wallpaper by mutableStateOf<ImageBitmap?>(null)
     var wallpaperDialog by mutableStateOf(false)
@@ -145,7 +146,19 @@ class LauncherState(val ctx: Context, private val sp: SharedPreferences) {
 
     // ---- caricamento e coerenza ----
 
+    fun removeW(item: Item) {
+        if (item.kind == Kind.WIDGET_A) item.key.toIntOrNull()?.let { widgets.remove(it) }
+        widgetPage = widgetPage.filter { it.id != item.id }
+        save()
+    }
+
+    fun resizeW(item: Item, w: Int, h: Int) {
+        widgetPage = widgetPage.map { if (it.id == item.id) it.copy(w = w, h = h) else it }
+        save()
+    }
+
     fun reload() {
+        pagesFromJson(sp.getString("wpage", null) ?: "")?.first?.firstOrNull()?.let { widgetPage = it }
         if (wallpaper == null) loadWallpaper()
         apps = loadApps(ctx)
         if (apps.isEmpty()) return
@@ -249,7 +262,8 @@ class LauncherState(val ctx: Context, private val sp: SharedPreferences) {
     }
 
     fun save() {
-        sp.edit().putString("layout", pagesToJson(pages, dock)).apply()
+        sp.edit().putString("layout", pagesToJson(pages, dock))
+            .putString("wpage", pagesToJson(listOf(widgetPage), emptyList())).apply()
     }
 
     // ---- modifiche ----
@@ -269,6 +283,11 @@ class LauncherState(val ctx: Context, private val sp: SharedPreferences) {
     }
 
     fun addWidget(kind: Kind, key: String, w: Int, h: Int, page: Int) {
+        if (page >= pages.size && prefs.lastPage == "widgets") {
+            widgetPage = widgetPage + Item(newId(), kind, key, w, h)
+            save()
+            return
+        }
         val m = pages.toMutableList()
         val p = page.coerceIn(0, m.size - 1)
         m[p] = listOf(Item(newId(), kind, key, w, h)) + m[p]

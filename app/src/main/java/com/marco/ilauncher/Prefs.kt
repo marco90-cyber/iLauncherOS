@@ -121,6 +121,7 @@ class LauncherPrefs(sp: SharedPreferences) {
     var transition by StrPref(sp, "transition", "slide")
 
     // App Library & badges
+    var lastPage by StrPref(sp, "lastPage", "library")
     var showLibrary by BoolPref(sp, "showLibrary", true)
     var badges by BoolPref(sp, "badges", true)
 
