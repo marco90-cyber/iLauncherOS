@@ -240,6 +240,14 @@ fun ItemContent(
             }
         }
     }
+    if (editing && item.isWidget) {
+        val hr = 11f * density
+        Box(
+            Modifier.offset(pxDp(wPx - 12f * density - hr), pxDp(hPx - 12f * density - hr)).size(22.dp)
+                .clip(CircleShape).background(Color(0xDDFFFFFF)),
+            contentAlignment = Alignment.Center
+        ) { Text("⤡", color = Color(0xFF333333), fontSize = 14.sp) }
+    }
     if (editing && !(item.kind == Kind.SYS)) {
         val c = badgeCenter(Rect(0f, 0f, wPx, hPx), item, iconPx, if (item.isWidget) 0f else (if (showLabel) 16f * density else 0f), density)
         MinusBadge(c, density)
@@ -384,6 +392,16 @@ fun flipPage(st: LauncherState, pager: PagerState, scope: kotlinx.coroutines.Cor
     }
 }
 
+fun rectOfItem(st: LauncherState, geo: Geo, page: Int, id: String): Rect? {
+    val pg = st.shownPages().getOrNull(page) ?: return null
+    val (placed, _) = layoutPage(pg, geo.cols, geo.rows, st.prefs.freeLayout)
+    val pl = placed.firstOrNull { it.item.id == id } ?: return null
+    return Rect(
+        geo.cellLeft(pl.col), geo.cellTop(pl.row),
+        geo.cellLeft(pl.col) + pl.item.w * geo.cellW, geo.cellTop(pl.row) + pl.item.h * geo.cellH
+    )
+}
+
 @Composable
 fun EditOverlay(st: LauncherState, geo: Geo, pager: PagerState) {
     val scope = rememberCoroutineScope()
@@ -394,7 +412,28 @@ fun EditOverlay(st: LauncherState, geo: Geo, pager: PagerState) {
                 val down = awaitFirstDown(requireUnconsumed = false)
                 val slop = viewConfiguration.touchSlop
                 val dens = g.density
-                val outcome = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
+                val hit0 = hitItem(st, g, pager.currentPage, down.position)
+                // maniglia di ridimensionamento nell'angolo in basso a destra dei widget
+                if (hit0 != null && hit0.first.isWidget &&
+                    (down.position - Offset(hit0.second.right, hit0.second.bottom)).getDistance() < 30f * dens
+                ) {
+                    down.consume()
+                    val wid = hit0.first.id
+                    val page = pager.currentPage
+                    while (true) {
+                        val ev = awaitPointerEvent()
+                        val c = ev.changes.firstOrNull { it.id == down.id } ?: break
+                        if (!c.pressed) break
+                        c.consume()
+                        val cur = st.pages.getOrNull(page)?.firstOrNull { it.id == wid } ?: break
+                        val rr = rectOfItem(st, g, page, wid) ?: break
+                        val nw = Math.ceil(((c.position.x - rr.left) / g.cellW).toDouble()).toInt().coerceIn(1, g.cols)
+                        val nh = Math.ceil(((c.position.y - rr.top) / g.cellH).toDouble()).toInt().coerceIn(1, g.rows)
+                        if (cur.w != nw || cur.h != nh) st.resize(cur, nw, nh)
+                    }
+                    return@awaitEachGesture
+                }
+                val outcome = withTimeoutOrNull(600_000L) {
                     var res = 0
                     while (res == 0) {
                         val ev = awaitPointerEvent()
@@ -406,9 +445,9 @@ fun EditOverlay(st: LauncherState, geo: Geo, pager: PagerState) {
                     res
                 }
                 val homeCount = st.shownPages().size
-                if (outcome == null) {
-                    // pressione lunga: inizia il trascinamento
-                    val hit = hitItem(st, g, pager.currentPage, down.position)
+                if (outcome == null || (outcome == 2 && hit0 != null)) {
+                    // in modalità modifica basta trascinare: nessuna pressione lunga necessaria
+                    val hit = hit0
                     if (hit != null) {
                         val (item, rect) = hit
                         st.beginDrag(item, down.position, down.position - Offset(rect.left, rect.top), Size(rect.width, rect.height))
@@ -460,9 +499,7 @@ fun EditOverlay(st: LauncherState, geo: Geo, pager: PagerState) {
                         val lh = if (item.isWidget) 0f else labelPx(g, st.prefs, inDock)
                         val bc = badgeCenter(rect, item, iconPxFor(g, st.prefs), lh, dens)
                         if ((down.position - bc).getDistance() < 24f * dens) {
-                            st.remove(item)
-                        } else if (item.isWidget) {
-                            st.resizeItem = item
+                            if (item.kind == Kind.APP) st.removeTarget = item else st.remove(item)
                         }
                     }
                 } else {
@@ -513,6 +550,7 @@ fun HomeScreen(st: LauncherState, pal: Pal, dark: Boolean) {
             if (st.drag != null) st.moveDrag(geo, st.dragFinger, pager.currentPage)
         }
 
+        st.wallpaper?.let { Image(it, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
         if (prefs.dimWallpaper && dark) Box(Modifier.fillMaxSize().background(Color(0x55000000)))
 
         Box(
@@ -601,14 +639,7 @@ fun HomeScreen(st: LauncherState, pal: Pal, dark: Boolean) {
                     })
                     DropdownMenuItem(text = { Text(tr("Edit Wallpaper")) }, onClick = {
                         menu = false
-                        try {
-                            ctx.startActivity(
-                                android.content.Intent.createChooser(
-                                    android.content.Intent(android.content.Intent.ACTION_SET_WALLPAPER), null
-                                ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                            )
-                        } catch (e: Exception) {
-                        }
+                        st.wallpaperDialog = true
                     })
                     DropdownMenuItem(text = { Text(tr("Launcher Settings")) }, onClick = {
                         menu = false

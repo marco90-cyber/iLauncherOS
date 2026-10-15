@@ -29,7 +29,12 @@ class MainActivity : ComponentActivity() {
 
     private val pkgReceiver = object : BroadcastReceiver() {
         override fun onReceive(c: Context?, i: Intent?) {
-            st.reload()
+            st.pickWallpaper = {
+            startActivityForResult(
+                Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("image/*"), 5150
+            )
+        }
+        st.reload()
         }
     }
 
@@ -86,6 +91,7 @@ class MainActivity : ComponentActivity() {
         @Suppress("DEPRECATION")
         super.onActivityResult(requestCode, resultCode, data)
         st.widgets.handleResult(requestCode, resultCode)
+        if (requestCode == 5150 && resultCode == RESULT_OK) data?.data?.let { st.setWallpaperFromUri(it) }
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
@@ -140,6 +146,8 @@ fun LauncherRoot(st: LauncherState) {
             if (settingsOpen) SettingsHost(st, pal)
             st.renameKey?.let { RenameDialog(st, it) }
             st.resizeItem?.let { ResizeDialog(st, it) }
+            st.removeTarget?.let { RemoveDialog(st, it) }
+            if (st.wallpaperDialog) WallpaperDialog(st)
         }
     }
 }

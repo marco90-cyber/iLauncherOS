@@ -3,6 +3,9 @@ package com.marco.ilauncher
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -64,6 +67,42 @@ class LauncherState(val ctx: Context, private val sp: SharedPreferences) {
     var settingsStack by mutableStateOf<List<String>>(emptyList())
     var renameKey by mutableStateOf<String?>(null)
     var resizeItem by mutableStateOf<Item?>(null)
+    var removeTarget by mutableStateOf<Item?>(null)
+    var wallpaper by mutableStateOf<ImageBitmap?>(null)
+    var wallpaperDialog by mutableStateOf(false)
+    var pickWallpaper: () -> Unit = {}
+
+    fun loadWallpaper() {
+        try {
+            val f = java.io.File(ctx.filesDir, "wallpaper.jpg")
+            if (f.exists()) wallpaper = BitmapFactory.decodeFile(f.absolutePath)?.asImageBitmap()
+        } catch (e: Exception) {
+        }
+    }
+
+    fun setWallpaperFromUri(uri: android.net.Uri) {
+        try {
+            val b = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            ctx.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, b) }
+            var sample = 1
+            while (b.outWidth / sample > 2400 || b.outHeight / sample > 2400) sample *= 2
+            val o = BitmapFactory.Options().apply { inSampleSize = sample }
+            val bmp = ctx.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, o) } ?: return
+            java.io.FileOutputStream(java.io.File(ctx.filesDir, "wallpaper.jpg")).use {
+                bmp.compress(Bitmap.CompressFormat.JPEG, 92, it)
+            }
+            wallpaper = bmp.asImageBitmap()
+        } catch (e: Exception) {
+        }
+    }
+
+    fun clearWallpaper() {
+        try {
+            java.io.File(ctx.filesDir, "wallpaper.jpg").delete()
+        } catch (e: Exception) {
+        }
+        wallpaper = null
+    }
     var pickerPage = 0
     var homeTick by mutableIntStateOf(0)
     var locationTick by mutableIntStateOf(0)
@@ -107,6 +146,7 @@ class LauncherState(val ctx: Context, private val sp: SharedPreferences) {
     // ---- caricamento e coerenza ----
 
     fun reload() {
+        if (wallpaper == null) loadWallpaper()
         apps = loadApps(ctx)
         if (apps.isEmpty()) return
         val saved = sp.getString("layout", null)?.let { pagesFromJson(it) }

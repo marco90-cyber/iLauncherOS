@@ -201,3 +201,60 @@ fun ResizeDialog(st: LauncherState, item: Item) {
         confirmButton = { TextButton(onClick = { st.resizeItem = null }) { Text(tr("Cancel")) } }
     )
 }
+
+@Composable
+fun RemoveDialog(st: LauncherState, item: Item) {
+    val ctx = LocalContext.current
+    val app = st.appOf(item.key)
+    val pkg = item.key.substringBefore('/')
+    AlertDialog(
+        onDismissRequest = { st.removeTarget = null },
+        title = { Text(app?.let { st.label(it) } ?: "") },
+        text = {
+            Column {
+                Text(
+                    tr("Uninstall"), color = Color(0xFFFF3B30), fontSize = 17.sp,
+                    modifier = Modifier.fillMaxWidth().clickable {
+                        st.removeTarget = null
+                        uninstallApp(ctx, pkg)
+                    }.padding(vertical = 12.dp)
+                )
+                Text(
+                    tr("Remove from Home Screen"), fontSize = 17.sp,
+                    modifier = Modifier.fillMaxWidth().clickable {
+                        st.removeTarget = null
+                        st.remove(item)
+                    }.padding(vertical = 12.dp)
+                )
+            }
+        },
+        confirmButton = { TextButton(onClick = { st.removeTarget = null }) { Text(tr("Cancel")) } }
+    )
+}
+
+@Composable
+fun WallpaperDialog(st: LauncherState) {
+    AlertDialog(
+        onDismissRequest = { st.wallpaperDialog = false },
+        title = { Text(tr("Edit Wallpaper")) },
+        text = {
+            Column {
+                Text(
+                    tr("Choose photo"), fontSize = 17.sp,
+                    modifier = Modifier.fillMaxWidth().clickable {
+                        st.wallpaperDialog = false
+                        st.pickWallpaper()
+                    }.padding(vertical = 12.dp)
+                )
+                Text(
+                    tr("Use system wallpaper"), fontSize = 17.sp,
+                    modifier = Modifier.fillMaxWidth().clickable {
+                        st.wallpaperDialog = false
+                        st.clearWallpaper()
+                    }.padding(vertical = 12.dp)
+                )
+            }
+        },
+        confirmButton = { TextButton(onClick = { st.wallpaperDialog = false }) { Text(tr("Cancel")) } }
+    )
+}
