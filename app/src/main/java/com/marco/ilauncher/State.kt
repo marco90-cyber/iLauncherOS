@@ -30,9 +30,10 @@ class Geo(
     val gridLeft = dp(6f)
     val gridWidth = wPx - dp(12f)
     val gridTop = topInset + dp(46f)
-    val dockH = if (showDock) dp(88f) else 0f
-    val dockLeft = dp(12f)
-    val dockWidth = wPx - dp(24f)
+    private val land = wPx > hPx
+    val dockH = if (showDock) dp(if (land) 66f else 88f) else 0f
+    val dockWidth = if (land) minOf(wPx - dp(24f), wPx * 0.5f) else wPx - dp(24f)
+    val dockLeft = (wPx - dockWidth) / 2f
     val dockTop = hPx - botInset - dp(10f) - dockH
     private val dotsH = dp(34f)
     val dotsCenterY = (if (showDock) dockTop else hPx - botInset) - dp(8f) - dotsH / 2f

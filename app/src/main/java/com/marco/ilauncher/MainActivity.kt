@@ -118,6 +118,14 @@ fun LauncherRoot(st: LauncherState) {
     val lang = p.lang
     Lang.it = if (lang == "auto") Locale.getDefault().language == "it" else lang == "it"
     val view = LocalView.current
+    val act = view.context as? android.app.Activity
+    LaunchedEffect(p.orientation) {
+        act?.requestedOrientation = when (p.orientation) {
+            "portrait" -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            "landscape" -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            else -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+    }
     val settingsOpen = st.settingsStack.isNotEmpty()
 
     LaunchedEffect(p.hideNav) {
