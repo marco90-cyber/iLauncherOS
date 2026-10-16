@@ -76,6 +76,16 @@ class LauncherState(val ctx: Context, private val sp: SharedPreferences) {
     /** Rotazione (gradi, continua) da applicare a icone e widget per restare dritti quando il telefono è inclinato. */
     var contentRot by mutableStateOf(0f)
     private var snapQ = 0
+    var sysAutoRotate by mutableStateOf(true)
+    fun refreshAutoRotate() {
+        sysAutoRotate = try {
+            android.provider.Settings.System.getInt(ctx.contentResolver, android.provider.Settings.System.ACCELEROMETER_ROTATION, 1) == 1
+        } catch (e: Exception) { true }
+    }
+    /** "Segui il sistema": layout fisso verticale, icone ruotate se la rotazione automatica di sistema è attiva. */
+    val rotActive: Boolean get() = (prefs.orientation == "system" || prefs.orientation == "rotate") && sysAutoRotate
+    /** Quarti di giro (0..3) del contenuto: 1 = telefono inclinato a destra... usato per i gesti. */
+    val tiltQ: Int get() = if (!rotActive) 0 else (((Math.round(contentRot / 90f) % 4) + 4) % 4)
     fun onDeviceAngle(o: Int) {
         if (o < 0) return
         val q = Math.round(o / 90f) % 4

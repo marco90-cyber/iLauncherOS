@@ -117,7 +117,7 @@ class LauncherPrefs(sp: SharedPreferences) {
     var showDots by BoolPref(sp, "showDots", true)
     var showDock by BoolPref(sp, "showDock", true)
     var dockStyle by StrPref(sp, "dockStyle", "glass")
-    var orientation by StrPref(sp, "orientation", "rotate")
+    var orientation by StrPref(sp, "orientation", "system")
     var widgetCaptions by BoolPref(sp, "widgetCaptions", true)
     var dimWallpaper by BoolPref(sp, "dimWallpaper", true)
     var transition by StrPref(sp, "transition", "slide")

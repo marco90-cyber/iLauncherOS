@@ -365,8 +365,7 @@ fun GeneralScreen(st: LauncherState, pal: Pal) {
     }
     SectionLabel(pal, tr("Screen rotation"))
     Card(pal) {
-        CheckRow(pal, tr("Fixed layout, rotate icons"), p.orientation == "rotate") { p.orientation = "rotate" }
-        CheckRow(pal, tr("Follow system"), p.orientation == "system") { p.orientation = "system" }
+        CheckRow(pal, tr("Follow system"), p.orientation == "system" || p.orientation == "rotate") { p.orientation = "system" }
         CheckRow(pal, tr("Lock portrait"), p.orientation == "portrait") { p.orientation = "portrait" }
         CheckRow(pal, tr("Landscape"), p.orientation == "landscape", true) { p.orientation = "landscape" }
     }

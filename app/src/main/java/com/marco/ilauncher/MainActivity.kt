@@ -66,7 +66,7 @@ class MainActivity : ComponentActivity() {
         setContent { LauncherRoot(st) }
         orient = object : android.view.OrientationEventListener(this) {
             override fun onOrientationChanged(o: Int) {
-                if (st.prefs.orientation == "rotate") st.onDeviceAngle(o)
+                if (st.rotActive) st.onDeviceAngle(o)
             }
         }
     }
@@ -76,6 +76,7 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         orient?.enable()
+        st.refreshAutoRotate()
         st.widgets.start()
     }
 
