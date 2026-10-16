@@ -128,13 +128,13 @@ fun LauncherRoot(st: LauncherState) {
     val lang = p.lang
     Lang.it = if (lang == "auto") Locale.getDefault().language == "it" else lang == "it"
     val view = LocalView.current
-    val act = view.context as? android.app.Activity
+    val act = generateSequence(view.context) { (it as? android.content.ContextWrapper)?.baseContext }
+        .firstOrNull { it is android.app.Activity } as? android.app.Activity
     LaunchedEffect(p.orientation) {
-        act?.requestedOrientation = when (p.orientation) {
-            "portrait", "rotate" -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-            "landscape" -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-            else -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-        }
+        // "Segui il sistema" = layout fisso verticale + icone che ruotano; solo "Orizzontale" ruota davvero lo schermo
+        act?.requestedOrientation =
+            if (p.orientation == "landscape") android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            else android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
     }
     val settingsOpen = st.settingsStack.isNotEmpty()
 
