@@ -389,28 +389,31 @@ fun HomePageGrid(st: LauncherState, geo: Geo, items: List<Item>, dark: Boolean) 
     }
 }
 
+/** Sfondo del dock: "glass" con bordo luminoso o "classic" piatto, con trasparenza 0..1. */
+fun Modifier.dockSurface(glass: Boolean, trans: Float, dark: Boolean, shape: androidx.compose.ui.graphics.Shape): Modifier {
+    val fill = if (dark) Color(0xFF323235) else Color(0xFFE3E3E8)
+    val a = (1f - trans).coerceIn(0f, 1f)
+    return this.clip(shape).background(fill.copy(alpha = a)).then(
+        if (glass) Modifier.border(
+            1.5.dp,
+            androidx.compose.ui.graphics.Brush.verticalGradient(
+                listOf(Color(0xAAFFFFFF), Color(0x44FFFFFF), Color(0x77FFFFFF)).map { it.copy(alpha = it.alpha * (0.35f + 0.65f * a)) }
+            ),
+            shape
+        ) else Modifier
+    )
+}
+
 @Composable
 fun DockBar(st: LauncherState, geo: Geo, pal: Pal, dark: Boolean) {
     val iconPx = iconPxFor(geo, st.prefs)
     val shown = st.shownDock()
-    val glass = st.prefs.dockStyle == "glass"
     val shape = RoundedCornerShape(pxDp(geo.dockH * 0.40f))
-    val fill = if (dark) Color(0xFF323235) else Color(0xFFE3E3E8)
     Box(
         Modifier
             .offset(pxDp(geo.dockLeft), pxDp(geo.dockTop))
             .size(pxDp(geo.dockWidth), pxDp(geo.dockH))
-            .clip(shape)
-            .background(if (glass) fill.copy(alpha = 0.92f) else fill)
-            .then(
-                if (glass) Modifier.border(
-                    1.5.dp,
-                    androidx.compose.ui.graphics.Brush.verticalGradient(
-                        listOf(Color(0xAAFFFFFF), Color(0x44FFFFFF), Color(0x77FFFFFF))
-                    ),
-                    shape
-                ) else Modifier
-            )
+            .dockSurface(st.prefs.dockStyle == "glass", st.prefs.dockTrans, dark, shape)
     )
     for ((i, it) in shown.withIndex()) {
         key(it.id) {

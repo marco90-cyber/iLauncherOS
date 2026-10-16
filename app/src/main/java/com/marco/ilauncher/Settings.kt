@@ -188,7 +188,7 @@ fun SettingsHost(st: LauncherState, pal: Pal) {
         "general" to "General", "icon" to "Change App Icon", "style" to "Homescreen Style", "grid" to "Screen Grid",
         "transition" to "Page Transition", "hidden" to "Hidden Apps", "library" to "App Library",
         "names" to "Change App Name", "badges" to "Badge Notifications", "language" to "Language",
-        "appearance" to "Appearance", "weather" to "Weather", "dockstyle" to "Style"
+        "appearance" to "Appearance", "weather" to "Weather", "dockstyle" to "Dock Style"
     )
     fun push(r: String) { st.settingsStack = st.settingsStack + r }
     fun pop() { st.settingsStack = st.settingsStack.dropLast(1) }
@@ -233,7 +233,7 @@ fun SettingsHost(st: LauncherState, pal: Pal) {
                         SetRow(pal, Icons.Rounded.Tune, Color(0xFF8E8E93), tr("General")) { push("general") }
                         SetRow(pal, Icons.Rounded.Apps, Color(0xFF34C759), tr("Change App Icon")) { push("icon") }
                         SetRow(pal, Icons.Rounded.Palette, Color(0xFF30B94D), tr("Homescreen Style")) { push("style") }
-                        SetRow(pal, Icons.Rounded.Dashboard, Color(0xFFAF52DE), tr("Style")) { push("dockstyle") }
+                        SetRow(pal, Icons.Rounded.Dashboard, Color(0xFFAF52DE), tr("Dock Style")) { push("dockstyle") }
                         SetRow(pal, Icons.Rounded.GridView, Color(0xFF3478F6), tr("Screen Grid")) { push("grid") }
                         SetRow(pal, Icons.Rounded.SwapHoriz, Color(0xFF4C8DF6), tr("Page Transition")) { push("transition") }
                         SetRow(pal, Icons.Rounded.VisibilityOff, Color(0xFF3B82F6), tr("Hidden Apps")) { push("hidden") }
@@ -331,13 +331,7 @@ fun SettingsHost(st: LauncherState, pal: Pal) {
                                 }
                             }
                         }
-                        "dockstyle" -> {
-                            SectionLabel(pal, tr("Dock"))
-                            Card(pal) {
-                                CheckRow(pal, tr("Glass Dock"), p.dockStyle == "glass") { p.dockStyle = "glass" }
-                                CheckRow(pal, tr("Classic Dock"), p.dockStyle == "classic", true) { p.dockStyle = "classic" }
-                            }
-                        }
+                        "dockstyle" -> DockStyleScreen(st, pal)
                         "library" -> {
                             Card(pal) {
                                 SwitchRow(pal, tr("Show App Library"), p.showLibrary, true) { p.showLibrary = it }
@@ -556,5 +550,43 @@ fun WeatherSettings(st: LauncherState, pal: Pal) {
     }
     Card(pal) {
         SetRow(pal, Icons.Rounded.WbSunny, Color(0xFF3B82F6), tr("Allow location for the weather"), true) { st.requestLocation() }
+    }
+}
+
+@Composable
+fun DockStyleScreen(st: LauncherState, pal: Pal) {
+    val p = st.prefs
+    val glass = p.dockStyle == "glass"
+    val trans = p.dockTrans
+    // anteprima su uno sfondo colorato, così la trasparenza si vede davvero
+    Box(
+        Modifier.padding(horizontal = 16.dp, vertical = 8.dp).fillMaxWidth().height(150.dp).clip(RoundedCornerShape(26.dp))
+            .background(Brush.linearGradient(listOf(Color(0xFF5B7DB8), Color(0xFF2E3A59), Color(0xFFB0577B))))
+    ) {
+        Row(
+            Modifier.align(Alignment.BottomCenter).padding(14.dp).fillMaxWidth().height(76.dp)
+                .dockSurface(glass, trans, pal.dark, RoundedCornerShape(30.dp)).padding(horizontal = 12.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            listOf(Color(0xFF34C759), Color(0xFF30B94D), Color(0xFFFFFFFF), Color(0xFF0A84FF)).forEach {
+                Box(Modifier.size(52.dp).clip(RoundedCornerShape(14.dp)).background(it))
+            }
+        }
+    }
+    SectionLabel(pal, tr("Dock Style"))
+    Card(pal) {
+        CheckRow(pal, tr("Glass Dock"), glass) { p.dockStyle = "glass" }
+        CheckRow(pal, tr("Classic Dock"), !glass, true) { p.dockStyle = "classic" }
+    }
+    SectionLabel(pal, tr("Transparency"))
+    Card(pal) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(tr("Transparency"), color = pal.text, fontSize = 16.sp, modifier = Modifier.weight(1f))
+                Text("${(trans * 100).toInt()}%", color = pal.accent, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+            }
+            MSlider(pal, trans, { if (glass) p.glassTrans = it else p.classicTrans = it }, 0f..1f)
+        }
     }
 }
