@@ -83,7 +83,7 @@ class LauncherState(val ctx: Context, private val sp: SharedPreferences) {
         } catch (e: Exception) { true }
     }
     /** "Segui il sistema": layout fisso verticale, icone ruotate se la rotazione automatica di sistema è attiva. */
-    val rotActive: Boolean get() = (prefs.orientation == "system" || prefs.orientation == "rotate") && sysAutoRotate
+    val rotActive: Boolean get() = prefs.orientation != "portrait" && sysAutoRotate
     /** Quarti di giro (0..3) del contenuto: 1 = telefono inclinato a destra... usato per i gesti. */
     val tiltQ: Int get() = if (!rotActive) 0 else (((Math.round(contentRot / 90f) % 4) + 4) % 4)
     fun onDeviceAngle(o: Int) {

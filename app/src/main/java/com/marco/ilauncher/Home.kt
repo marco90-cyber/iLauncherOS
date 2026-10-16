@@ -683,7 +683,10 @@ fun HomeScreen(st: LauncherState, pal: Pal, dark: Boolean) {
             Box(
                 Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter
             ) {
-                Box(Modifier.offset(0.dp, pxDp(geo.dotsCenterY - 14f * geo.density))) {
+                val dotsRot by androidx.compose.animation.core.animateFloatAsState(
+                    if (st.rotActive) st.contentRot else 0f, androidx.compose.animation.core.tween(300), label = "dotsrot"
+                )
+                Box(Modifier.offset(0.dp, pxDp(geo.dotsCenterY - 14f * geo.density)).graphicsLayer { rotationZ = dotsRot }) {
                     if (prefs.showSearch && count == 1 && !st.editing) {
                         Row(
                             Modifier.clip(RoundedCornerShape(50)).background(Color(0x55000000))

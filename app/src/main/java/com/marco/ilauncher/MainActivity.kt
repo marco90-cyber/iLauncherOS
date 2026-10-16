@@ -133,8 +133,7 @@ fun LauncherRoot(st: LauncherState) {
     LaunchedEffect(p.orientation) {
         // "Segui il sistema" = layout fisso verticale + icone che ruotano; solo "Orizzontale" ruota davvero lo schermo
         act?.requestedOrientation =
-            if (p.orientation == "landscape") android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-            else android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
     }
     val settingsOpen = st.settingsStack.isNotEmpty()
 
