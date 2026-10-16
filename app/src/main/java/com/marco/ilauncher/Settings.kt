@@ -363,11 +363,6 @@ fun GeneralScreen(st: LauncherState, pal: Pal) {
         SwitchRow(pal, tr("Auto arrange home screen"), p.autoArrange) { p.autoArrange = it }
         SwitchRow(pal, tr("Blur effect"), p.blur, true) { p.blur = it }
     }
-    SectionLabel(pal, tr("Screen rotation"))
-    Card(pal) {
-        CheckRow(pal, tr("Follow system"), p.orientation != "portrait") { p.orientation = "system" }
-        CheckRow(pal, tr("Lock portrait"), p.orientation == "portrait", true) { p.orientation = "portrait" }
-    }
     SectionLabel(pal, tr("Change App Size"))
     Card(pal) {
         SwitchRow(pal, tr("Hide app name"), p.hideNames) { p.hideNames = it }

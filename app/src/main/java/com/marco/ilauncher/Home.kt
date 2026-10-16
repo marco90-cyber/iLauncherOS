@@ -19,7 +19,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
@@ -330,25 +329,7 @@ fun HomeItem(
             }
             .then(clickMod)
     ) {
-        val cr by androidx.compose.animation.core.animateFloatAsState(
-            if (st.rotActive) st.contentRot else 0f,
-            androidx.compose.animation.core.tween(300), label = "crot"
-        )
-        Box(
-            Modifier.fillMaxSize().graphicsLayer {
-                rotationZ = cr
-                val r = Math.toRadians(cr.toDouble())
-                val c = Math.abs(Math.cos(r)).toFloat()
-                val sn = Math.abs(Math.sin(r)).toFloat()
-                val bw = wPx * c + hPx * sn
-                val bh = wPx * sn + hPx * c
-                val f = minOf(wPx / bw, hPx / bh, 1f)
-                scaleX = f
-                scaleY = f
-            }
-        ) {
-            ItemContent(st, item, wPx, hPx, iconPx, showLabel, editing, dark, geo.density)
-        }
+        ItemContent(st, item, wPx, hPx, iconPx, showLabel, editing, dark, geo.density)
         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
             DropdownMenuItem(text = { Text(tr("Edit Home Screen")) }, onClick = { menu = false; st.editing = true })
             if (item.kind == Kind.APP) {
@@ -623,52 +604,24 @@ fun HomeScreen(st: LauncherState, pal: Pal, dark: Boolean) {
         Box(
             Modifier.fillMaxSize().pointerInput(st.editing) {
                 if (!st.editing) detectTapGestures(onLongPress = { st.editing = true })
-            }.pointerInput(st.editing, pager.currentPage >= shown.size, st.tiltQ) {
-                val q = st.tiltQ
-                if (!st.editing && pager.currentPage < shown.size && q % 2 == 0) {
+            }.pointerInput(st.editing, pager.currentPage >= shown.size) {
+                if (!st.editing && pager.currentPage < shown.size) {
                     var total = 0f
                     detectVerticalDragGestures(
                         onDragStart = { total = 0f },
                         onDragEnd = {
-                            val t = if (q == 2) -total else total
-                            if (t > 120f * geo.density) expandNotifications(st.ctx)
-                            else if (t < -120f * geo.density) st.showSearch = true
+                            if (total > 120f * geo.density) expandNotifications(st.ctx)
+                            else if (total < -120f * geo.density) st.showSearch = true
                         },
                         onDragCancel = {},
                         onVerticalDrag = { _, dy -> total += dy }
-                    )
-                }
-            }.pointerInput(st.editing, st.tiltQ) {
-                // telefono inclinato: gli assi si scambiano (scorrere "di lato" per l'utente è verticale sullo schermo)
-                val q = st.tiltQ
-                if (!st.editing && q % 2 == 1) {
-                    var tx = 0f
-                    var ty = 0f
-                    detectDragGestures(
-                        onDragStart = { tx = 0f; ty = 0f },
-                        onDragEnd = {
-                            val th = 70f * geo.density
-                            if (Math.abs(ty) >= Math.abs(tx)) {
-                                // q==3: telefono ruotato in senso orario -> avanti = dita verso il basso
-                                val fwd = if (q == 3) ty > th else ty < -th
-                                val back = if (q == 3) ty < -th else ty > th
-                                if (fwd && pager.currentPage < pager.pageCount - 1) scope.launch { pager.animateScrollToPage(pager.currentPage + 1) }
-                                else if (back && pager.currentPage > 0) scope.launch { pager.animateScrollToPage(pager.currentPage - 1) }
-                            } else if (pager.currentPage < shown.size) {
-                                val down = if (q == 3) tx > 120f * geo.density else tx < -120f * geo.density
-                                val up = if (q == 3) tx < -120f * geo.density else tx > 120f * geo.density
-                                if (down) expandNotifications(st.ctx) else if (up) st.showSearch = true
-                            }
-                        },
-                        onDragCancel = {},
-                        onDrag = { c, d -> tx += d.x; ty += d.y }
                     )
                 }
             }
         ) {
             HorizontalPager(
                 state = pager, modifier = Modifier.fillMaxSize(),
-                userScrollEnabled = (!st.editing || pager.currentPage >= shown.size) && st.drag == null && st.tiltQ % 2 == 0
+                userScrollEnabled = (!st.editing || pager.currentPage >= shown.size) && st.drag == null
             ) { page ->
                 Box(Modifier.fillMaxSize().pageFx(pager, page, prefs.transition)) {
                     if (page < shown.size) HomePageGrid(st, geo, shown[page], dark)
@@ -683,10 +636,7 @@ fun HomeScreen(st: LauncherState, pal: Pal, dark: Boolean) {
             Box(
                 Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter
             ) {
-                val dotsRot by androidx.compose.animation.core.animateFloatAsState(
-                    if (st.rotActive) st.contentRot else 0f, androidx.compose.animation.core.tween(300), label = "dotsrot"
-                )
-                Box(Modifier.offset(0.dp, pxDp(geo.dotsCenterY - 14f * geo.density)).graphicsLayer { rotationZ = dotsRot }) {
+                Box(Modifier.offset(0.dp, pxDp(geo.dotsCenterY - 14f * geo.density))) {
                     if (prefs.showSearch && count == 1 && !st.editing) {
                         Row(
                             Modifier.clip(RoundedCornerShape(50)).background(Color(0x55000000))

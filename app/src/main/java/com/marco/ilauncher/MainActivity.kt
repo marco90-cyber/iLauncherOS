@@ -64,25 +64,15 @@ class MainActivity : ComponentActivity() {
         }
         registerReceiver(pkgReceiver, f)
         setContent { LauncherRoot(st) }
-        orient = object : android.view.OrientationEventListener(this) {
-            override fun onOrientationChanged(o: Int) {
-                if (st.rotActive) st.onDeviceAngle(o)
-            }
-        }
     }
-
-    private var orient: android.view.OrientationEventListener? = null
 
     override fun onStart() {
         super.onStart()
-        orient?.enable()
-        st.refreshAutoRotate()
         st.widgets.start()
     }
 
     override fun onStop() {
         super.onStop()
-        orient?.disable()
         st.widgets.stop()
     }
 
@@ -128,13 +118,6 @@ fun LauncherRoot(st: LauncherState) {
     val lang = p.lang
     Lang.it = if (lang == "auto") Locale.getDefault().language == "it" else lang == "it"
     val view = LocalView.current
-    val act = generateSequence(view.context) { (it as? android.content.ContextWrapper)?.baseContext }
-        .firstOrNull { it is android.app.Activity } as? android.app.Activity
-    LaunchedEffect(p.orientation) {
-        // "Segui il sistema" = layout fisso verticale + icone che ruotano; solo "Orizzontale" ruota davvero lo schermo
-        act?.requestedOrientation =
-            android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-    }
     val settingsOpen = st.settingsStack.isNotEmpty()
 
     LaunchedEffect(p.hideNav) {

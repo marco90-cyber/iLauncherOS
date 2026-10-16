@@ -30,10 +30,9 @@ class Geo(
     val gridLeft = dp(6f)
     val gridWidth = wPx - dp(12f)
     val gridTop = topInset + dp(46f)
-    private val land = wPx > hPx
-    val dockH = if (showDock) dp(if (land) 66f else 88f) else 0f
-    val dockWidth = if (land) minOf(wPx - dp(24f), wPx * 0.5f) else wPx - dp(24f)
-    val dockLeft = (wPx - dockWidth) / 2f
+    val dockH = if (showDock) dp(88f) else 0f
+    val dockLeft = dp(12f)
+    val dockWidth = wPx - dp(24f)
     val dockTop = hPx - botInset - dp(10f) - dockH
     private val dotsH = dp(34f)
     val dotsCenterY = (if (showDock) dockTop else hPx - botInset) - dp(8f) - dotsH / 2f
@@ -73,30 +72,6 @@ class LauncherState(val ctx: Context, private val sp: SharedPreferences) {
     var folderEditing by mutableStateOf(false)
     var mergeTarget by mutableStateOf<String?>(null)
     var hoverId by mutableStateOf<String?>(null)
-    /** Rotazione (gradi, continua) da applicare a icone e widget per restare dritti quando il telefono è inclinato. */
-    var contentRot by mutableStateOf(0f)
-    private var snapQ = 0
-    var sysAutoRotate by mutableStateOf(true)
-    fun refreshAutoRotate() {
-        sysAutoRotate = try {
-            android.provider.Settings.System.getInt(ctx.contentResolver, android.provider.Settings.System.ACCELEROMETER_ROTATION, 1) == 1
-        } catch (e: Exception) { true }
-    }
-    /** "Segui il sistema": layout fisso verticale, icone ruotate se la rotazione automatica di sistema è attiva. */
-    val rotActive: Boolean get() = prefs.orientation != "portrait" && sysAutoRotate
-    /** Quarti di giro (0..3) del contenuto: 1 = telefono inclinato a destra... usato per i gesti. */
-    val tiltQ: Int get() = if (!rotActive) 0 else (((Math.round(contentRot / 90f) % 4) + 4) % 4)
-    fun onDeviceAngle(o: Int) {
-        if (o < 0) return
-        val q = Math.round(o / 90f) % 4
-        if (q == snapQ) return
-        if (Math.abs(o - q * 90 - (if (q == 0 && o > 180) 360 else 0)) > 30) return
-        var d = q - snapQ
-        if (d > 2) d -= 4
-        if (d < -2) d += 4
-        contentRot -= d * 90f
-        snapQ = q
-    }
     var showCreateFolder by mutableStateOf(false)
     var removeTarget by mutableStateOf<Item?>(null)
     var wallpaper by mutableStateOf<ImageBitmap?>(null)
