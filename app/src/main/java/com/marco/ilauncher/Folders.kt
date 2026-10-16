@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -75,8 +76,8 @@ fun FolderOverlay(st: LauncherState, id: String) {
             }
         }
     }
-    Box(
-        Modifier.fillMaxSize().background(Color(0x99000000)).pointerInput(Unit) {
+    androidx.compose.foundation.layout.BoxWithConstraints(
+        Modifier.fillMaxSize().background(Color(0xAA000000)).pointerInput(Unit) {
             detectTapGestures {
                 if (st.folderEditing) st.folderEditing = false
                 st.openFolder = null
@@ -84,70 +85,82 @@ fun FolderOverlay(st: LauncherState, id: String) {
         },
         contentAlignment = Alignment.Center
     ) {
-        Column(
-            Modifier.padding(horizontal = 20.dp).fillMaxWidth().clip(RoundedCornerShape(32.dp))
-                .background(Color(0xE6303036)).pointerInput(Unit) { detectTapGestures { } }
-                .padding(vertical = 18.dp, horizontal = 12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            if (st.folderEditing) {
-                Box(
-                    Modifier.padding(horizontal = 16.dp).fillMaxWidth().clip(RoundedCornerShape(12.dp))
-                        .background(Color(0x33FFFFFF)).padding(vertical = 8.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    BasicTextField(
-                        value = folder.name, onValueChange = { st.renameFolder(id, it) }, singleLine = true,
-                        textStyle = TextStyle(color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center),
-                        cursorBrush = SolidColor(Color.White),
-                        modifier = Modifier.fillMaxWidth().focusRequester(focus)
+        val panelW = maxWidth * 0.76f
+        val iconS = panelW * 0.21f
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            // titolo grande sopra il pannello: tieni premuto per rinominare
+            Box(
+                Modifier.padding(bottom = 36.dp).width(panelW).pointerInput(Unit) {
+                    detectTapGestures(onLongPress = { st.folderEditing = true }, onTap = { })
+                },
+                contentAlignment = Alignment.Center
+            ) {
+                if (st.folderEditing) {
+                    Box(
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color(0x33FFFFFF)).padding(vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        BasicTextField(
+                            value = folder.name, onValueChange = { st.renameFolder(id, it) }, singleLine = true,
+                            textStyle = TextStyle(color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center),
+                            cursorBrush = SolidColor(Color.White),
+                            modifier = Modifier.fillMaxWidth().focusRequester(focus)
+                        )
+                    }
+                } else {
+                    Text(
+                        folder.name.ifBlank { tr("Folder") }, color = Color.White, fontSize = 34.sp,
+                        fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis
                     )
                 }
-            } else {
-                Text(folder.name.ifBlank { tr("Folder") }, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
             }
-            Spacer(Modifier.height(14.dp))
-            folder.apps.mapNotNull { st.appOf(it) }.chunked(4).forEach { row ->
-                Row(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-                    row.forEach { a ->
-                        Box(Modifier.weight(1f), contentAlignment = Alignment.TopCenter) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier.combinedClickable(
-                                    onClick = {
+            Column(
+                Modifier.width(panelW).heightIn(min = panelW * 1.05f).clip(RoundedCornerShape(38.dp))
+                    .background(Color(0x40808088)).pointerInput(Unit) { detectTapGestures { } }
+                    .padding(horizontal = 6.dp, vertical = 22.dp)
+            ) {
+                folder.apps.mapNotNull { st.appOf(it) }.chunked(3).forEach { row ->
+                    Row(Modifier.fillMaxWidth().padding(bottom = 14.dp)) {
+                        row.forEach { a ->
+                            Box(Modifier.weight(1f), contentAlignment = Alignment.TopCenter) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier.clickable(
+                                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                                        indication = null
+                                    ) {
                                         if (!st.folderEditing) {
                                             st.openFolder = null
                                             launchApp(ctx, a)
                                         }
-                                    },
-                                    onLongClick = { st.folderEditing = true }
-                                )
-                            ) {
-                                Image(st.icon(a), null, Modifier.size(58.dp))
-                                Text(
-                                    st.label(a), color = Color.White, fontSize = 11.sp, maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center,
-                                    modifier = Modifier.width(66.dp).padding(top = 3.dp)
-                                )
-                            }
-                            if (st.folderEditing) {
-                                Box(
-                                    Modifier.align(Alignment.TopStart).padding(start = 2.dp).size(22.dp).clip(CircleShape)
-                                        .background(Color(0xFF8E8E93))
-                                        .clickable { st.removeFromFolder(id, a.key) },
-                                    contentAlignment = Alignment.Center
-                                ) { Box(Modifier.width(11.dp).height(2.dp).background(Color.White)) }
+                                    }
+                                ) {
+                                    Image(st.icon(a), null, Modifier.size(iconS))
+                                    Text(
+                                        st.label(a), color = Color.White, fontSize = 13.sp, maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center,
+                                        modifier = Modifier.width(iconS + 14.dp).padding(top = 4.dp)
+                                    )
+                                }
+                                if (st.folderEditing) {
+                                    Box(
+                                        Modifier.align(Alignment.TopStart).padding(start = 4.dp).size(24.dp).clip(CircleShape)
+                                            .background(Color(0xFF8E8E93))
+                                            .clickable { st.removeFromFolder(id, a.key) },
+                                        contentAlignment = Alignment.Center
+                                    ) { Box(Modifier.width(12.dp).height(2.dp).background(Color.White)) }
+                                }
                             }
                         }
+                        for (i in row.size until 3) Spacer(Modifier.weight(1f))
                     }
-                    for (i in row.size until 4) Spacer(Modifier.weight(1f))
                 }
             }
             if (st.folderEditing) {
                 Text(
                     tr("Done"), color = Color.White, fontSize = 15.sp,
-                    modifier = Modifier.padding(top = 10.dp).clip(RoundedCornerShape(50)).background(Color(0xFF0A84FF))
-                        .clickable { st.folderEditing = false }.padding(horizontal = 24.dp, vertical = 8.dp)
+                    modifier = Modifier.padding(top = 18.dp).clip(RoundedCornerShape(50)).background(Color(0xFF0A84FF))
+                        .clickable { st.folderEditing = false }.padding(horizontal = 28.dp, vertical = 9.dp)
                 )
             }
         }

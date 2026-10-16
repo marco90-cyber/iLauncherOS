@@ -227,7 +227,7 @@ private val IT = mapOf(
     "Allow location for the weather" to "Consenti la posizione per il meteo",
     "No results" to "Nessun risultato", "Select Default Launcher " to "Scegli launcher predefinito",
     "Choose photo" to "Scegli una foto", "Use system wallpaper" to "Usa lo sfondo di sistema",
-    "Create folder" to "Crea cartella", "Folder" to "Cartella", "Folder name" to "Nome cartella", "Last page" to "Ultima pagina",
+    "Create folder" to "Crea cartella", "Style" to "Stile", "Dock" to "Dock", "Glass Dock" to "Dock Glass", "Classic Dock" to "Dock Classico", "Folder" to "Cartella", "Folder name" to "Nome cartella", "Last page" to "Ultima pagina",
     "Allow empty spaces" to "Consenti spazi vuoti",
     "Icons stay where you drop them, leaving empty spaces on the Home Screen and in the Dock." to "Le icone restano dove le lasci, con spazi vuoti nella Home e nel Dock.",
     "Hide the navigation bar. Swipe from the edge to show it." to "Nasconde la barra di navigazione. Scorri dal bordo per mostrarla.",

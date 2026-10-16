@@ -165,7 +165,7 @@ fun SettingsHost(st: LauncherState, pal: Pal) {
         "general" to "General", "icon" to "Change App Icon", "style" to "Homescreen Style", "grid" to "Screen Grid",
         "transition" to "Page Transition", "hidden" to "Hidden Apps", "library" to "App Library",
         "names" to "Change App Name", "badges" to "Badge Notifications", "language" to "Language",
-        "appearance" to "Appearance", "weather" to "Weather"
+        "appearance" to "Appearance", "weather" to "Weather", "dockstyle" to "Style"
     )
     fun push(r: String) { st.settingsStack = st.settingsStack + r }
     fun pop() { st.settingsStack = st.settingsStack.dropLast(1) }
@@ -210,6 +210,7 @@ fun SettingsHost(st: LauncherState, pal: Pal) {
                         SetRow(pal, Icons.Filled.Tune, Color(0xFF8E8E93), tr("General")) { push("general") }
                         SetRow(pal, Icons.Filled.Apps, Color(0xFF34C759), tr("Change App Icon")) { push("icon") }
                         SetRow(pal, Icons.Filled.Palette, Color(0xFF30B94D), tr("Homescreen Style")) { push("style") }
+                        SetRow(pal, Icons.Filled.Dashboard, Color(0xFFAF52DE), tr("Style")) { push("dockstyle") }
                         SetRow(pal, Icons.Filled.GridView, Color(0xFF3478F6), tr("Screen Grid")) { push("grid") }
                         SetRow(pal, Icons.Filled.SwapHoriz, Color(0xFF4C8DF6), tr("Page Transition")) { push("transition") }
                         SetRow(pal, Icons.Filled.VisibilityOff, Color(0xFF3B82F6), tr("Hidden Apps")) { push("hidden") }
@@ -289,6 +290,13 @@ fun SettingsHost(st: LauncherState, pal: Pal) {
                                         )
                                     }
                                 }
+                            }
+                        }
+                        "dockstyle" -> {
+                            SectionLabel(pal, tr("Dock"))
+                            Card(pal) {
+                                CheckRow(pal, tr("Glass Dock"), p.dockStyle == "glass") { p.dockStyle = "glass" }
+                                CheckRow(pal, tr("Classic Dock"), p.dockStyle == "classic", true) { p.dockStyle = "classic" }
                             }
                         }
                         "library" -> {

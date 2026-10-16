@@ -366,13 +366,24 @@ fun HomePageGrid(st: LauncherState, geo: Geo, items: List<Item>, dark: Boolean) 
 fun DockBar(st: LauncherState, geo: Geo, pal: Pal, dark: Boolean) {
     val iconPx = iconPxFor(geo, st.prefs)
     val shown = st.shownDock()
+    val glass = st.prefs.dockStyle == "glass"
+    val shape = RoundedCornerShape(pxDp(geo.dockH * 0.40f))
+    val fill = if (dark) Color(0xFF323235) else Color(0xFFE3E3E8)
     Box(
         Modifier
             .offset(pxDp(geo.dockLeft), pxDp(geo.dockTop))
             .size(pxDp(geo.dockWidth), pxDp(geo.dockH))
-            .clip(RoundedCornerShape(30.dp))
-            .background(if (st.prefs.blur) pal.dock else pal.dockSolid)
-            .border(1.dp, Color(0x22FFFFFF), RoundedCornerShape(30.dp))
+            .clip(shape)
+            .background(if (glass) fill.copy(alpha = 0.92f) else fill)
+            .then(
+                if (glass) Modifier.border(
+                    1.5.dp,
+                    androidx.compose.ui.graphics.Brush.verticalGradient(
+                        listOf(Color(0xAAFFFFFF), Color(0x44FFFFFF), Color(0x77FFFFFF))
+                    ),
+                    shape
+                ) else Modifier
+            )
     )
     for ((i, it) in shown.withIndex()) {
         key(it.id) {
