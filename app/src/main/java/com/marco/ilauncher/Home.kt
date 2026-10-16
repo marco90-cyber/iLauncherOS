@@ -329,7 +329,25 @@ fun HomeItem(
             }
             .then(clickMod)
     ) {
-        ItemContent(st, item, wPx, hPx, iconPx, showLabel, editing, dark, geo.density)
+        val cr by androidx.compose.animation.core.animateFloatAsState(
+            if (st.prefs.orientation == "rotate") st.contentRot else 0f,
+            androidx.compose.animation.core.tween(300), label = "crot"
+        )
+        Box(
+            Modifier.fillMaxSize().graphicsLayer {
+                rotationZ = cr
+                val r = Math.toRadians(cr.toDouble())
+                val c = Math.abs(Math.cos(r)).toFloat()
+                val sn = Math.abs(Math.sin(r)).toFloat()
+                val bw = wPx * c + hPx * sn
+                val bh = wPx * sn + hPx * c
+                val f = minOf(wPx / bw, hPx / bh, 1f)
+                scaleX = f
+                scaleY = f
+            }
+        ) {
+            ItemContent(st, item, wPx, hPx, iconPx, showLabel, editing, dark, geo.density)
+        }
         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
             DropdownMenuItem(text = { Text(tr("Edit Home Screen")) }, onClick = { menu = false; st.editing = true })
             if (item.kind == Kind.APP) {

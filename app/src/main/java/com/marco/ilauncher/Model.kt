@@ -228,7 +228,7 @@ private val IT = mapOf(
     "No results" to "Nessun risultato", "Select Default Launcher " to "Scegli launcher predefinito",
     "Choose photo" to "Scegli una foto", "Use system wallpaper" to "Usa lo sfondo di sistema",
     "Create folder" to "Crea cartella", "Style" to "Stile", "Dock" to "Dock", "Glass Dock" to "Dock Glass", "Classic Dock" to "Dock Classico", "Folder" to "Cartella", "Folder name" to "Nome cartella", "Last page" to "Ultima pagina",
-    "Screen rotation" to "Rotazione schermo", "Follow system" to "Segui il sistema", "Lock portrait" to "Blocca in verticale", "Landscape" to "Orizzontale", "Allow empty spaces" to "Consenti spazi vuoti",
+    "Screen rotation" to "Rotazione schermo", "Fixed layout, rotate icons" to "Layout fisso, icone ruotate", "Follow system" to "Segui il sistema", "Lock portrait" to "Blocca in verticale", "Landscape" to "Orizzontale", "Allow empty spaces" to "Consenti spazi vuoti",
     "Icons stay where you drop them, leaving empty spaces on the Home Screen and in the Dock." to "Le icone restano dove le lasci, con spazi vuoti nella Home e nel Dock.",
     "Hide the navigation bar. Swipe from the edge to show it." to "Nasconde la barra di navigazione. Scorri dal bordo per mostrarla.",
     "Add new apps to the Home Screen as they are installed." to "Aggiunge le nuove app alla Home appena installate."

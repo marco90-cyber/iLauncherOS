@@ -64,15 +64,24 @@ class MainActivity : ComponentActivity() {
         }
         registerReceiver(pkgReceiver, f)
         setContent { LauncherRoot(st) }
+        orient = object : android.view.OrientationEventListener(this) {
+            override fun onOrientationChanged(o: Int) {
+                if (st.prefs.orientation == "rotate") st.onDeviceAngle(o)
+            }
+        }
     }
+
+    private var orient: android.view.OrientationEventListener? = null
 
     override fun onStart() {
         super.onStart()
+        orient?.enable()
         st.widgets.start()
     }
 
     override fun onStop() {
         super.onStop()
+        orient?.disable()
         st.widgets.stop()
     }
 
@@ -121,7 +130,7 @@ fun LauncherRoot(st: LauncherState) {
     val act = view.context as? android.app.Activity
     LaunchedEffect(p.orientation) {
         act?.requestedOrientation = when (p.orientation) {
-            "portrait" -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            "portrait", "rotate" -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
             "landscape" -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
             else -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }

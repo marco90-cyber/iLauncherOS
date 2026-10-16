@@ -73,6 +73,20 @@ class LauncherState(val ctx: Context, private val sp: SharedPreferences) {
     var folderEditing by mutableStateOf(false)
     var mergeTarget by mutableStateOf<String?>(null)
     var hoverId by mutableStateOf<String?>(null)
+    /** Rotazione (gradi, continua) da applicare a icone e widget per restare dritti quando il telefono è inclinato. */
+    var contentRot by mutableStateOf(0f)
+    private var snapQ = 0
+    fun onDeviceAngle(o: Int) {
+        if (o < 0) return
+        val q = Math.round(o / 90f) % 4
+        if (q == snapQ) return
+        if (Math.abs(o - q * 90 - (if (q == 0 && o > 180) 360 else 0)) > 30) return
+        var d = q - snapQ
+        if (d > 2) d -= 4
+        if (d < -2) d += 4
+        contentRot -= d * 90f
+        snapQ = q
+    }
     var showCreateFolder by mutableStateOf(false)
     var removeTarget by mutableStateOf<Item?>(null)
     var wallpaper by mutableStateOf<ImageBitmap?>(null)
