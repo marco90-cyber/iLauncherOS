@@ -44,6 +44,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Icon
 import androidx.compose.material.icons.rounded.Check
@@ -709,10 +710,7 @@ fun HomeScreen(st: LauncherState, pal: Pal, dark: Boolean) {
                     Spacer(Modifier.width(8.dp))
                     Text(tr("Edit"), color = pal.onAccentContainer, fontSize = 14.sp, fontWeight = FontWeight.Medium)
                 }
-                DropdownMenu(
-                    expanded = menu, onDismissRequest = { menu = false },
-                    shape = RoundedCornerShape(20.dp), containerColor = pal.cardHigh, tonalElevation = 3.dp
-                ) {
+                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                     @Composable
                     fun item(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
                         DropdownMenuItem(

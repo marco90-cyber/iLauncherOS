@@ -149,7 +149,10 @@ fun LauncherRoot(st: LauncherState) {
         }
     }
 
-    androidx.compose.material3.MaterialTheme(colorScheme = remember(dark) { pal.scheme() }) {
+    androidx.compose.material3.MaterialTheme(
+        colorScheme = remember(dark) { pal.scheme() },
+        shapes = androidx.compose.material3.Shapes(extraSmall = androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
+    ) {
     key(lang) {
         Box(Modifier.fillMaxSize()) {
             HomeScreen(st, pal, dark)
