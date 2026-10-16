@@ -149,6 +149,7 @@ fun LauncherRoot(st: LauncherState) {
         }
     }
 
+    androidx.compose.material3.MaterialTheme(colorScheme = remember(dark) { pal.scheme() }) {
     key(lang) {
         Box(Modifier.fillMaxSize()) {
             HomeScreen(st, pal, dark)
@@ -162,5 +163,6 @@ fun LauncherRoot(st: LauncherState) {
             st.removeTarget?.let { RemoveDialog(st, it) }
             if (st.wallpaperDialog) WallpaperDialog(st)
         }
+    }
     }
 }

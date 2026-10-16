@@ -29,24 +29,27 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Apps
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Brightness6
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Dashboard
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.GridView
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.SwapHoriz
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.filled.WbSunny
+import androidx.compose.material.icons.rounded.Apps
+import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Brightness6
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.Dashboard
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.GridView
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.SwapHoriz
+import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.VisibilityOff
+import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material3.Icon
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -67,23 +70,40 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-private val GREEN = Color(0xFF34C759)
+@Composable
+private fun switchColors(pal: Pal) = SwitchDefaults.colors(
+    checkedTrackColor = pal.accent, checkedThumbColor = pal.onAccent, checkedBorderColor = pal.accent,
+    uncheckedTrackColor = pal.cardHigh, uncheckedThumbColor = Color(0xFF8E9099), uncheckedBorderColor = Color(0xFF8E9099)
+)
+
+@Composable
+fun MSlider(pal: Pal, value: Float, onChange: (Float) -> Unit, range: ClosedFloatingPointRange<Float>) {
+    Slider(
+        value = value, onValueChange = onChange, valueRange = range,
+        colors = SliderDefaults.colors(thumbColor = pal.accent, activeTrackColor = pal.accent, inactiveTrackColor = pal.sep)
+    )
+}
+
+@Composable
+private fun RowDivider(pal: Pal, start: androidx.compose.ui.unit.Dp) {
+    Box(Modifier.padding(start = start, end = 16.dp).fillMaxWidth().height(0.5.dp).background(pal.sep.copy(alpha = 0.55f)))
+}
 
 @Composable
 fun SetRow(pal: Pal, icon: ImageVector, color: Color, title: String, last: Boolean = false, onClick: () -> Unit) {
     Column {
         Row(
-            Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 11.dp),
+            Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(Modifier.size(30.dp).clip(RoundedCornerShape(8.dp)).background(color), contentAlignment = Alignment.Center) {
-                Icon(icon, null, tint = Color.White, modifier = Modifier.size(19.dp))
+            Box(Modifier.size(40.dp).clip(CircleShape).background(pal.accentContainer), contentAlignment = Alignment.Center) {
+                Icon(icon, null, tint = pal.onAccentContainer, modifier = Modifier.size(22.dp))
             }
-            Spacer(Modifier.width(14.dp))
+            Spacer(Modifier.width(16.dp))
             Text(title, color = pal.text, fontSize = 16.sp, modifier = Modifier.weight(1f))
-            Icon(Icons.Filled.ChevronRight, null, tint = pal.sub, modifier = Modifier.size(20.dp))
+            Icon(Icons.Rounded.ChevronRight, null, tint = pal.sub, modifier = Modifier.size(22.dp))
         }
-        if (!last) Box(Modifier.padding(start = 58.dp).fillMaxWidth().height(0.5.dp).background(pal.sep))
+        if (!last) RowDivider(pal, 72.dp)
     }
 }
 
@@ -91,16 +111,13 @@ fun SetRow(pal: Pal, icon: ImageVector, color: Color, title: String, last: Boole
 fun SwitchRow(pal: Pal, title: String, value: Boolean, last: Boolean = false, onChange: (Boolean) -> Unit) {
     Column {
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            Modifier.fillMaxWidth().clickable { onChange(!value) }.padding(horizontal = 20.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(title, color = pal.text, fontSize = 16.sp, modifier = Modifier.weight(1f))
-            Switch(
-                checked = value, onCheckedChange = onChange,
-                colors = SwitchDefaults.colors(checkedTrackColor = GREEN, checkedThumbColor = Color.White)
-            )
+            Switch(checked = value, onCheckedChange = onChange, colors = switchColors(pal))
         }
-        if (!last) Box(Modifier.padding(start = 16.dp).fillMaxWidth().height(0.5.dp).background(pal.sep))
+        if (!last) RowDivider(pal, 20.dp)
     }
 }
 
@@ -108,31 +125,37 @@ fun SwitchRow(pal: Pal, title: String, value: Boolean, last: Boolean = false, on
 fun CheckRow(pal: Pal, title: String, selected: Boolean, last: Boolean = false, onClick: () -> Unit) {
     Column {
         Row(
-            Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 14.dp),
+            Modifier.fillMaxWidth().clickable(onClick = onClick).padding(start = 20.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(title, color = pal.text, fontSize = 16.sp, modifier = Modifier.weight(1f))
-            if (selected) Icon(Icons.Filled.Check, null, tint = pal.accent)
+            RadioButton(
+                selected = selected, onClick = onClick,
+                colors = RadioButtonDefaults.colors(selectedColor = pal.accent, unselectedColor = pal.sub)
+            )
         }
-        if (!last) Box(Modifier.padding(start = 16.dp).fillMaxWidth().height(0.5.dp).background(pal.sep))
+        if (!last) RowDivider(pal, 20.dp)
     }
 }
 
 @Composable
 fun Card(pal: Pal, content: @Composable () -> Unit) {
-    Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp).fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(pal.card)) {
+    Column(Modifier.padding(horizontal = 16.dp, vertical = 6.dp).fillMaxWidth().clip(RoundedCornerShape(26.dp)).background(pal.card)) {
         content()
     }
 }
 
 @Composable
 fun SectionLabel(pal: Pal, text: String) {
-    Text(text, color = pal.sub, fontSize = 13.sp, modifier = Modifier.padding(start = 32.dp, top = 12.dp, bottom = 2.dp))
+    Text(
+        text, color = pal.accent, fontSize = 14.sp, fontWeight = FontWeight.Medium,
+        modifier = Modifier.padding(start = 32.dp, top = 16.dp, bottom = 4.dp)
+    )
 }
 
 @Composable
 fun Footnote(pal: Pal, text: String) {
-    Text(text, color = pal.sub, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 32.dp, vertical = 4.dp))
+    Text(text, color = pal.sub, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 32.dp, vertical = 4.dp))
 }
 
 fun isDefaultHome(ctx: android.content.Context): Boolean {
@@ -173,8 +196,8 @@ fun SettingsHost(st: LauncherState, pal: Pal) {
     Box(Modifier.fillMaxSize().background(pal.bg).clickable(enabled = false) {}) {
         if (route == "main") {
             var tab by remember { mutableStateOf(0) }
-            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(top = top + 8.dp, bottom = bottom + 90.dp)) {
-                Text(tr("Settings"), color = pal.text, fontSize = 32.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 20.dp, bottom = 8.dp))
+            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(top = top + 8.dp, bottom = bottom + 110.dp)) {
+                Text(tr("Settings"), color = pal.text, fontSize = 34.sp, modifier = Modifier.padding(start = 28.dp, top = 24.dp, bottom = 16.dp))
                 if (tab == 0) {
                     Card(pal) {
                         Row(
@@ -187,7 +210,7 @@ fun SettingsHost(st: LauncherState, pal: Pal) {
                                 Text(tr("Go To Launcher"), color = pal.text, fontSize = 17.sp, fontWeight = FontWeight.Medium)
                                 Text(tr("Explore your OS interface"), color = pal.sub, fontSize = 12.sp)
                             }
-                            Icon(Icons.Filled.ChevronRight, null, tint = pal.sub)
+                            Icon(Icons.Rounded.ChevronRight, null, tint = pal.sub)
                         }
                     }
                     if (!isDefaultHome(ctx)) Card(pal) {
@@ -198,64 +221,80 @@ fun SettingsHost(st: LauncherState, pal: Pal) {
                                 color = pal.sub, fontSize = 12.sp, modifier = Modifier.padding(vertical = 6.dp)
                             )
                             Box(
-                                Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(pal.accent)
-                                    .clickable { chooseDefaultLauncher(ctx) }.padding(vertical = 12.dp),
+                                Modifier.fillMaxWidth().clip(RoundedCornerShape(50)).background(pal.accent)
+                                    .clickable { chooseDefaultLauncher(ctx) }.padding(vertical = 14.dp),
                                 contentAlignment = Alignment.Center
-                            ) { Text(tr("Set As Default"), color = Color.White, fontWeight = FontWeight.SemiBold) }
+                            ) { Text(tr("Set As Default"), color = pal.onAccent, fontWeight = FontWeight.Medium) }
                         }
                     }
                     SectionLabel(pal, tr("General"))
                     Card(pal) {
-                        SetRow(pal, Icons.Filled.Home, Color(0xFF0A84FF), tr("Select Default Launcher")) { chooseDefaultLauncher(ctx) }
-                        SetRow(pal, Icons.Filled.Tune, Color(0xFF8E8E93), tr("General")) { push("general") }
-                        SetRow(pal, Icons.Filled.Apps, Color(0xFF34C759), tr("Change App Icon")) { push("icon") }
-                        SetRow(pal, Icons.Filled.Palette, Color(0xFF30B94D), tr("Homescreen Style")) { push("style") }
-                        SetRow(pal, Icons.Filled.Dashboard, Color(0xFFAF52DE), tr("Style")) { push("dockstyle") }
-                        SetRow(pal, Icons.Filled.GridView, Color(0xFF3478F6), tr("Screen Grid")) { push("grid") }
-                        SetRow(pal, Icons.Filled.SwapHoriz, Color(0xFF4C8DF6), tr("Page Transition")) { push("transition") }
-                        SetRow(pal, Icons.Filled.VisibilityOff, Color(0xFF3B82F6), tr("Hidden Apps")) { push("hidden") }
-                        SetRow(pal, Icons.Filled.Dashboard, Color(0xFF3A7BEA), tr("App Library")) { push("library") }
-                        SetRow(pal, Icons.Filled.Edit, Color(0xFF34C759), tr("Change App Name")) { push("names") }
-                        SetRow(pal, Icons.Filled.Notifications, Color(0xFFFF453A), tr("Badge Notifications")) { push("badges") }
-                        SetRow(pal, Icons.Filled.Language, Color(0xFF4C8DF6), tr("Language")) { push("language") }
-                        SetRow(pal, Icons.Filled.Brightness6, Color(0xFF30B94D), tr("Appearance"), last = true) { push("appearance") }
+                        SetRow(pal, Icons.Rounded.Home, Color(0xFF0A84FF), tr("Select Default Launcher")) { chooseDefaultLauncher(ctx) }
+                        SetRow(pal, Icons.Rounded.Tune, Color(0xFF8E8E93), tr("General")) { push("general") }
+                        SetRow(pal, Icons.Rounded.Apps, Color(0xFF34C759), tr("Change App Icon")) { push("icon") }
+                        SetRow(pal, Icons.Rounded.Palette, Color(0xFF30B94D), tr("Homescreen Style")) { push("style") }
+                        SetRow(pal, Icons.Rounded.Dashboard, Color(0xFFAF52DE), tr("Style")) { push("dockstyle") }
+                        SetRow(pal, Icons.Rounded.GridView, Color(0xFF3478F6), tr("Screen Grid")) { push("grid") }
+                        SetRow(pal, Icons.Rounded.SwapHoriz, Color(0xFF4C8DF6), tr("Page Transition")) { push("transition") }
+                        SetRow(pal, Icons.Rounded.VisibilityOff, Color(0xFF3B82F6), tr("Hidden Apps")) { push("hidden") }
+                        SetRow(pal, Icons.Rounded.Dashboard, Color(0xFF3A7BEA), tr("App Library")) { push("library") }
+                        SetRow(pal, Icons.Rounded.Edit, Color(0xFF34C759), tr("Change App Name")) { push("names") }
+                        SetRow(pal, Icons.Rounded.Notifications, Color(0xFFFF453A), tr("Badge Notifications")) { push("badges") }
+                        SetRow(pal, Icons.Rounded.Language, Color(0xFF4C8DF6), tr("Language")) { push("language") }
+                        SetRow(pal, Icons.Rounded.Brightness6, Color(0xFF30B94D), tr("Appearance"), last = true) { push("appearance") }
                     }
                 } else {
                     SectionLabel(pal, tr("App Functions Settings"))
                     Card(pal) {
-                        SetRow(pal, Icons.Filled.WbSunny, Color(0xFF3B82F6), tr("Weather"), last = true) { push("weather") }
+                        SetRow(pal, Icons.Rounded.WbSunny, Color(0xFF3B82F6), tr("Weather"), last = true) { push("weather") }
                     }
                 }
             }
-            // barra Settings / Functions
-            Box(Modifier.fillMaxSize().padding(bottom = bottom + 10.dp), contentAlignment = Alignment.BottomCenter) {
+            // barra di navigazione Material 3: Impostazioni / Funzioni
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
                 Row(
-                    Modifier.clip(RoundedCornerShape(50)).background(if (pal.dark) Color(0xEE2C2C2E) else Color(0xEEFFFFFF)).padding(6.dp)
+                    Modifier.fillMaxWidth().background(pal.card).padding(top = 12.dp, bottom = bottom + 12.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    listOf(tr("Settings"), tr("Functions")).forEachIndexed { i, t ->
-                        Box(
-                            Modifier.clip(RoundedCornerShape(50))
-                                .background(if (tab == i) Color(0x33808080) else Color.Transparent)
-                                .clickable { tab = i }.padding(horizontal = 28.dp, vertical = 8.dp)
-                        ) { Text(t, color = if (tab == i) pal.accent else pal.sub, fontSize = 13.sp) }
+                    listOf(Icons.Rounded.Tune to tr("Settings"), Icons.Rounded.Apps to tr("Functions")).forEachIndexed { i, (ic, t) ->
+                        Column(
+                            Modifier.weight(1f).clickable(
+                                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                                indication = null
+                            ) { tab = i },
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Box(
+                                Modifier.width(64.dp).height(32.dp).clip(RoundedCornerShape(50))
+                                    .background(if (tab == i) pal.accentContainer else Color.Transparent),
+                                contentAlignment = Alignment.Center
+                            ) { Icon(ic, null, tint = if (tab == i) pal.onAccentContainer else pal.sub, modifier = Modifier.size(24.dp)) }
+                            Text(
+                                t, color = if (tab == i) pal.text else pal.sub, fontSize = 12.sp,
+                                fontWeight = if (tab == i) FontWeight.Bold else FontWeight.Medium,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+                        }
                     }
                 }
             }
         } else {
             Column(Modifier.fillMaxSize().padding(top = top)) {
-                Box(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-                    Box(
-                        Modifier.padding(start = 12.dp).size(38.dp).clip(CircleShape).background(pal.card).clickable { pop() },
-                        contentAlignment = Alignment.Center
-                    ) { Icon(Icons.Filled.ArrowBack, tr("Back"), tint = pal.text, modifier = Modifier.size(20.dp)) }
-                    Text(
-                        tr(titles[route] ?: ""), color = pal.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
+                Box(Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.CenterStart) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            Modifier.padding(start = 8.dp).size(48.dp).clip(CircleShape).clickable { pop() },
+                            contentAlignment = Alignment.Center
+                        ) { Icon(Icons.Rounded.ArrowBack, tr("Back"), tint = pal.text, modifier = Modifier.size(24.dp)) }
+                        Text(
+                            tr(titles[route] ?: ""), color = pal.text, fontSize = 22.sp,
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
                     if (route == "grid") Text(
-                        tr("Done"), color = Color.White, fontSize = 14.sp,
-                        modifier = Modifier.align(Alignment.CenterEnd).padding(end = 12.dp).clip(RoundedCornerShape(50))
-                            .background(pal.accent).clickable { pop() }.padding(horizontal = 16.dp, vertical = 7.dp)
+                        tr("Done"), color = pal.onAccent, fontSize = 14.sp, fontWeight = FontWeight.Medium,
+                        modifier = Modifier.align(Alignment.CenterEnd).padding(end = 16.dp).clip(RoundedCornerShape(50))
+                            .background(pal.accent).clickable { pop() }.padding(horizontal = 20.dp, vertical = 9.dp)
                     )
                 }
                 Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = bottom + 24.dp)) {
@@ -286,7 +325,7 @@ fun SettingsHost(st: LauncherState, pal: Pal) {
                                         Text(st.label(a), color = pal.text, fontSize = 16.sp, modifier = Modifier.weight(1f))
                                         Switch(
                                             checked = hid, onCheckedChange = { st.hideApp(a.key, it) },
-                                            colors = SwitchDefaults.colors(checkedTrackColor = GREEN, checkedThumbColor = Color.White)
+                                            colors = switchColors(pal)
                                         )
                                     }
                                 }
@@ -328,7 +367,7 @@ fun SettingsHost(st: LauncherState, pal: Pal) {
                             Card(pal) { SwitchRow(pal, tr("Show badges"), p.badges, true) { p.badges = it } }
                             Footnote(pal, tr("Badges need notification access. Tap to open the system settings."))
                             Card(pal) {
-                                SetRow(pal, Icons.Filled.Notifications, Color(0xFFFF453A), tr("Grant notification access"), true) {
+                                SetRow(pal, Icons.Rounded.Notifications, Color(0xFFFF453A), tr("Grant notification access"), true) {
                                     try {
                                         ctx.startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                                     } catch (e: Exception) {
@@ -374,7 +413,7 @@ fun GeneralScreen(st: LauncherState, pal: Pal) {
             Image(bmp, null, Modifier.size(64.dp))
             Text(tr("Message"), color = pal.text, fontSize = (11f * p.textScale).sp)
             Text("${(p.textScale * 100).toInt()}%", color = pal.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
-            Slider(value = p.textScale, onValueChange = { p.textScale = it }, valueRange = 0.7f..1.5f)
+            MSlider(pal, p.textScale, { p.textScale = it }, 0.7f..1.5f)
         }
     }
 }
@@ -394,7 +433,7 @@ fun IconScreen(st: LauncherState, pal: Pal) {
         Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Image(st.sysIconBitmap(), null, Modifier.size((56f * p.iconScale).dp))
             Text("${(p.iconScale * 100).toInt()}%", color = pal.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
-            Slider(value = p.iconScale, onValueChange = { p.iconScale = it }, valueRange = 0.7f..1.1f)
+            MSlider(pal, p.iconScale, { p.iconScale = it }, 0.7f..1.1f)
         }
     }
 }
@@ -410,7 +449,7 @@ fun StyleScreen(st: LauncherState, pal: Pal) {
         SwitchRow(pal, tr("Dim wallpaper in dark mode"), p.dimWallpaper, true) { p.dimWallpaper = it }
     }
     Card(pal) {
-        SetRow(pal, Icons.Filled.Palette, Color(0xFF8E8E93), tr("Use system wallpaper"), true) { st.clearWallpaper() }
+        SetRow(pal, Icons.Rounded.Palette, Color(0xFF8E8E93), tr("Use system wallpaper"), true) { st.clearWallpaper() }
     }
 }
 
@@ -489,7 +528,7 @@ fun AppearanceScreen(st: LauncherState, pal: Pal) {
                             .border(1.5.dp, if (sel) pal.accent else pal.sub, CircleShape)
                             .background(if (sel) pal.accent else Color.Transparent),
                         contentAlignment = Alignment.Center
-                    ) { if (sel) Icon(Icons.Filled.Check, null, tint = Color.White, modifier = Modifier.size(14.dp)) }
+                    ) { if (sel) Icon(Icons.Rounded.Check, null, tint = pal.onAccent, modifier = Modifier.size(14.dp)) }
                 }
             }
         }
@@ -516,6 +555,6 @@ fun WeatherSettings(st: LauncherState, pal: Pal) {
         CheckRow(pal, tr("Every day"), p.weatherRefreshHours == 24, true) { p.weatherRefreshHours = 24 }
     }
     Card(pal) {
-        SetRow(pal, Icons.Filled.WbSunny, Color(0xFF3B82F6), tr("Allow location for the weather"), true) { st.requestLocation() }
+        SetRow(pal, Icons.Rounded.WbSunny, Color(0xFF3B82F6), tr("Allow location for the weather"), true) { st.requestLocation() }
     }
 }

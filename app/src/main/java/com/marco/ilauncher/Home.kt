@@ -44,6 +44,15 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.material.icons.Icons
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.CreateNewFolder
+import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.Wallpaper
+import androidx.compose.material.icons.rounded.Widgets
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -81,14 +90,31 @@ import kotlin.math.roundToInt
 
 /** Colori dell'interfaccia in base al tema chiaro/scuro. */
 class Pal(val dark: Boolean) {
-    val bg = if (dark) Color(0xFF000000) else Color(0xFFF2F2F7)
-    val card = if (dark) Color(0xFF1C1C1E) else Color.White
-    val text = if (dark) Color.White else Color.Black
-    val sub = if (dark) Color(0xFF8E8E93) else Color(0xFF6C6C70)
-    val sep = if (dark) Color(0xFF38383A) else Color(0xFFD1D1D6)
-    val accent = Color(0xFF0A84FF)
+    // palette Material 3 (baseline blu)
+    val bg = if (dark) Color(0xFF111318) else Color(0xFFF9F9FF)
+    val card = if (dark) Color(0xFF1D2024) else Color(0xFFECEDF4)
+    val cardHigh = if (dark) Color(0xFF282A2F) else Color(0xFFE2E2E9)
+    val text = if (dark) Color(0xFFE2E2E9) else Color(0xFF191C20)
+    val sub = if (dark) Color(0xFFC4C6D0) else Color(0xFF44474E)
+    val sep = if (dark) Color(0xFF44474F) else Color(0xFFC4C6CF)
+    val accent = if (dark) Color(0xFFAAC7FF) else Color(0xFF005AC1)
+    val onAccent = if (dark) Color(0xFF002F65) else Color.White
+    val accentContainer = if (dark) Color(0xFF00458F) else Color(0xFFD8E2FF)
+    val onAccentContainer = if (dark) Color(0xFFD8E2FF) else Color(0xFF001A41)
     val dock = if (dark) Color(0x55000000) else Color(0x55FFFFFF)
     val dockSolid = if (dark) Color(0xFF2C2C2E) else Color(0xFFE5E5EA)
+
+    fun scheme() = if (dark) androidx.compose.material3.darkColorScheme(
+        primary = accent, onPrimary = onAccent, primaryContainer = accentContainer, onPrimaryContainer = onAccentContainer,
+        background = bg, onBackground = text, surface = bg, onSurface = text, surfaceVariant = cardHigh, onSurfaceVariant = sub,
+        surfaceContainer = card, surfaceContainerHigh = cardHigh, outline = Color(0xFF8E9099), outlineVariant = sep,
+        secondaryContainer = accentContainer, onSecondaryContainer = onAccentContainer
+    ) else androidx.compose.material3.lightColorScheme(
+        primary = accent, onPrimary = onAccent, primaryContainer = accentContainer, onPrimaryContainer = onAccentContainer,
+        background = bg, onBackground = text, surface = bg, onSurface = text, surfaceVariant = cardHigh, onSurfaceVariant = sub,
+        surfaceContainer = card, surfaceContainerHigh = cardHigh, outline = Color(0xFF74777F), outlineVariant = sep,
+        secondaryContainer = accentContainer, onSecondaryContainer = onAccentContainer
+    )
 }
 
 @Composable
@@ -674,42 +700,50 @@ fun HomeScreen(st: LauncherState, pal: Pal, dark: Boolean) {
         if (st.editing) {
             var menu by remember { mutableStateOf(false) }
             Box(Modifier.offset(12.dp, pxDp(top + 6f * geo.density))) {
-                Text(
-                    tr("Edit"), color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium,
-                    modifier = Modifier.clip(RoundedCornerShape(50)).background(Color(0x88000000))
-                        .clickable { menu = true }.padding(horizontal = 16.dp, vertical = 7.dp)
-                )
-                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                    DropdownMenuItem(text = { Text(tr("Add Widget")) }, onClick = {
-                        menu = false
+                Row(
+                    Modifier.clip(RoundedCornerShape(50)).background(pal.accentContainer)
+                        .clickable { menu = true }.padding(start = 12.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Rounded.Tune, null, tint = pal.onAccentContainer, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(tr("Edit"), color = pal.onAccentContainer, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                }
+                DropdownMenu(
+                    expanded = menu, onDismissRequest = { menu = false },
+                    shape = RoundedCornerShape(20.dp), containerColor = pal.cardHigh, tonalElevation = 3.dp
+                ) {
+                    @Composable
+                    fun item(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
+                        DropdownMenuItem(
+                            text = { Text(tr(label), color = pal.text, fontSize = 15.sp) },
+                            leadingIcon = { Icon(icon, null, tint = pal.sub) },
+                            onClick = { menu = false; onClick() }
+                        )
+                    }
+                    item("Add Widget", Icons.Rounded.Widgets) {
                         st.pickerPage = pager.currentPage
                         st.showPicker = true
-                    })
-                    DropdownMenuItem(text = { Text(tr("Create folder")) }, onClick = {
-                        menu = false
+                    }
+                    item("Create folder", Icons.Rounded.CreateNewFolder) {
                         st.pickerPage = pager.currentPage
                         st.showCreateFolder = true
-                    })
-                    DropdownMenuItem(text = { Text(tr("Customize Theme")) }, onClick = {
-                        menu = false
-                        st.settingsStack = listOf("main", "appearance")
-                    })
-                    DropdownMenuItem(text = { Text(tr("Edit Wallpaper")) }, onClick = {
-                        menu = false
-                        st.pickWallpaper()
-                    })
-                    DropdownMenuItem(text = { Text(tr("Launcher Settings")) }, onClick = {
-                        menu = false
-                        st.settingsStack = listOf("main")
-                    })
+                    }
+                    item("Customize Theme", Icons.Rounded.Palette) { st.settingsStack = listOf("main", "appearance") }
+                    item("Edit Wallpaper", Icons.Rounded.Wallpaper) { st.pickWallpaper() }
+                    item("Launcher Settings", Icons.Rounded.Settings) { st.settingsStack = listOf("main") }
                 }
             }
             Box(Modifier.fillMaxSize().offset(0.dp, pxDp(top + 6f * geo.density)), contentAlignment = Alignment.TopEnd) {
-                Text(
-                    tr("Done"), color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(end = 12.dp).clip(RoundedCornerShape(50)).background(Color(0x88000000))
-                        .clickable { st.editing = false }.padding(horizontal = 16.dp, vertical = 7.dp)
-                )
+                Row(
+                    Modifier.padding(end = 12.dp).clip(RoundedCornerShape(50)).background(pal.accent)
+                        .clickable { st.editing = false }.padding(start = 12.dp, end = 18.dp, top = 8.dp, bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Rounded.Check, null, tint = pal.onAccent, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(tr("Done"), color = pal.onAccent, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                }
             }
         }
     }
